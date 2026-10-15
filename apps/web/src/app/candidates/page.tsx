@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Image from "next/image";
 import { fetchApi, Election } from "../../lib/api";
 import { User, Award, Shield, FileText } from "lucide-react";
 
