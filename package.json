@@ -1,0 +1,36 @@
+{
+  "name": "seait-voting-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Online Voting Management System with Blockchain for South East Asian Institute of Technology, Inc. (SEAIT)",
+  "workspaces": [
+    "apps/*",
+    "blockchain"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace=apps/web run dev",
+    "dev:api": "npm --workspace=apps/api run dev",
+    "build": "npm run build --workspaces --if-present",
+    "build:web": "npm --workspace=apps/web run build",
+    "build:api": "npm --workspace=apps/api run build",
+    "test": "npm run test --workspaces --if-present",
+    "test:api": "npm --workspace=apps/api run test",
+    "test:blockchain": "npm --workspace=blockchain run test",
+    "db:generate": "npm --workspace=apps/api run db:generate",
+    "db:push": "npm --workspace=apps/api run db:push",
+    "db:seed": "npm --workspace=apps/api run db:seed"
+  },
+  "keywords": [
+    "voting",
+    "blockchain",
+    "seait",
+    "election",
+    "solidity",
+    "nextjs",
+    "express",
+    "postgresql",
+    "prisma"
+  ],
+  "author": "South East Asian Institute of Technology, Inc. (SEAIT) CICT",
+  "license": "ISC"
+}

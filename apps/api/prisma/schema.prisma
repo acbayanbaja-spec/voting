@@ -1,0 +1,245 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  COMELEC_OFFICER
+  SYSTEM_ADMIN
+}
+
+enum ElectionStatus {
+  DRAFT
+  SCHEDULED
+  OPEN
+  CLOSED
+  UNDER_REVIEW
+  PUBLISHED
+  CANCELLED
+}
+
+enum BlockchainStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  URGENT
+}
+
+model User {
+  id                  String             @id @default(uuid())
+  schoolId            String             @unique
+  email               String             @unique
+  passwordHash        String
+  firstName           String
+  lastName            String
+  role                Role               @default(STUDENT)
+  department          String
+  yearLevel           String
+  isActive            Boolean            @default(true)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  voterEligibilities  VoterEligibility[]
+  announcements       Announcement[]
+  auditLogs           AuditLog[]
+
+  @@map("users")
+}
+
+model Election {
+  id                   String             @id @default(uuid())
+  title                String
+  description          String             @db.Text
+  academicYear         String
+  semester             String
+  status               ElectionStatus     @default(DRAFT)
+  startTime            DateTime
+  endTime              DateTime
+  onChainElectionId    String?            @unique
+  resultCommitmentHash String?
+  resultsPublishedAt   DateTime?
+  closedAt             DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  positions            Position[]
+  candidates           Candidate[]
+  voterEligibilities   VoterEligibility[]
+  ballotSubmissions    BallotSubmission[]
+  receipts             Receipt[]
+  results              ElectionResult[]
+
+  @@map("elections")
+}
+
+model Position {
+  id          String           @id @default(uuid())
+  electionId  String
+  election    Election         @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  title       String
+  description String?          @db.Text
+  orderIndex  Int              @default(0)
+  maxChoices  Int              @default(1)
+  isRequired  Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+
+  candidates  Candidate[]
+  results     ElectionResult[]
+  ballotChoices BallotChoice[]
+
+  @@map("positions")
+}
+
+model Candidate {
+  id          String           @id @default(uuid())
+  electionId  String
+  election    Election         @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  positionId  String
+  position    Position         @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  fullName    String
+  studentId   String
+  partyList   String?
+  platform    String           @db.Text
+  photoUrl    String?
+  createdAt   DateTime         @default(now())
+
+  results     ElectionResult[]
+  ballotChoices BallotChoice[]
+
+  @@map("candidates")
+}
+
+model VoterEligibility {
+  id               String    @id @default(uuid())
+  electionId       String
+  election         Election  @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hasVoted         Boolean   @default(false)
+  votedAt          DateTime?
+  receiptReference String?
+  createdAt        DateTime  @default(now())
+
+  @@unique([electionId, userId])
+  @@index([receiptReference])
+  @@map("voter_eligibilities")
+}
+
+// Strict privacy separation: BallotSubmission does NOT link to userId
+model BallotSubmission {
+  id                   String           @id @default(uuid())
+  electionId           String
+  election             Election         @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  ballotCommitmentHash String           @unique
+  receiptReference     String           @unique
+  encryptedBallot      String           @db.Text
+  blockchainTxHash     String?
+  blockchainStatus     BlockchainStatus @default(PENDING)
+  blockNumber          Int?
+  submittedAt          DateTime         @default(now())
+
+  choices              BallotChoice[]
+
+  @@index([electionId])
+  @@index([receiptReference])
+  @@map("ballot_submissions")
+}
+
+model BallotChoice {
+  id           String           @id @default(uuid())
+  submissionId String
+  submission   BallotSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  positionId   String
+  position     Position         @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  candidateId  String
+  candidate    Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  createdAt    DateTime         @default(now())
+
+  @@index([positionId, candidateId])
+  @@map("ballot_choices")
+}
+
+model Receipt {
+  id                   String           @id @default(uuid())
+  receiptReference     String           @unique
+  electionId           String
+  election             Election         @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  ballotCommitmentHash String
+  blockchainTxHash     String?
+  blockchainStatus     BlockchainStatus @default(PENDING)
+  blockNumber          Int?
+  verificationCode     String
+  createdAt            DateTime         @default(now())
+
+  @@index([electionId])
+  @@map("receipts")
+}
+
+model ElectionResult {
+  id          String    @id @default(uuid())
+  electionId  String
+  election    Election  @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  positionId  String
+  position    Position  @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  voteCount   Int       @default(0)
+  rank        Int       @default(1)
+  isWinner    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  @@unique([electionId, candidateId])
+  @@index([electionId, positionId])
+  @@map("election_results")
+}
+
+model Announcement {
+  id          String    @id @default(uuid())
+  title       String
+  content     String    @db.Text
+  priority    Priority  @default(NORMAL)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  isActive    Boolean   @default(true)
+  publishedAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+
+  @@map("announcements")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  details   String?  @db.Text
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  key         String   @id
+  value       String   @db.Text
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_settings")
+}
