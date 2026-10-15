@@ -7,10 +7,12 @@ export const healthRouter = Router();
 // GET / - System health check
 healthRouter.get("/", async (req, res) => {
   let dbStatus = "UP";
+  let dbError: string | null = null;
   try {
     await prisma.$queryRaw`SELECT 1`;
-  } catch {
+  } catch (err: any) {
     dbStatus = "DOWN";
+    dbError = err?.message || String(err);
   }
 
   const blockchainStatus = await blockchainService.getStatus();
@@ -23,6 +25,7 @@ healthRouter.get("/", async (req, res) => {
     database: {
       status: dbStatus,
       engine: "PostgreSQL",
+      ...(dbError && { error: dbError }),
     },
     blockchain: {
       connected: blockchainStatus.connected,

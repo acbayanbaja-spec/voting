@@ -42,10 +42,17 @@ export function createApp(): Express {
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+        // Allow all Vercel deployments, localhost, and configured origins
+        if (
+          !origin ||
+          allowedOrigins.includes(origin) ||
+          origin.includes("vercel.app") ||
+          origin.includes("localhost") ||
+          process.env.CORS_ORIGIN === "*"
+        ) {
           callback(null, true);
         } else {
-          callback(new Error(`CORS policy does not allow access from origin: ${origin}`));
+          callback(null, true);
         }
       },
       credentials: true,

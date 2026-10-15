@@ -64,10 +64,7 @@ export function errorHandler(
   }
 
   const statusCode = err.statusCode || 500;
-  const message =
-    statusCode === 500 && process.env.NODE_ENV === "production"
-      ? "An unexpected internal server error occurred."
-      : err.message || "An unexpected error occurred.";
+  const message = err.message || "An unexpected error occurred.";
 
   res.status(statusCode).json({
     success: false,

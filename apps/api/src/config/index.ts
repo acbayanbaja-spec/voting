@@ -24,7 +24,9 @@ export interface AppConfig {
 export const config: AppConfig = {
   env: process.env.NODE_ENV || "development",
   port: parseInt(process.env.PORT || "5000", 10),
-  databaseUrl: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/seait_voting?schema=public",
+  databaseUrl:
+    process.env.DATABASE_URL ||
+    "postgresql://postgres.cyscfyujtufkwldrflth:128088100011marga@aws-0-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require",
   directUrl: process.env.DIRECT_URL,
   jwtSecret: process.env.JWT_SECRET || "seait-voting-system-super-secret-jwt-key-change-in-production-2026",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "8h",
