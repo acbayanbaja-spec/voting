@@ -1,3 +1,4 @@
+import "./config"; // Load and sanitize environment variables first
 import { createApp } from "./app";
 import { config } from "./config";
 import { logger } from "./utils/logger";

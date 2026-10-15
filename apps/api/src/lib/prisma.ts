@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { config } from "../config";
+import { config, sanitizeDatabaseUrl } from "../config";
 
 declare global {
   // allow global `var` declarations
@@ -7,14 +7,8 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-function resolveDatabaseUrl(): string {
-  let url = process.env.DATABASE_URL || config.databaseUrl;
-  const isLocal = /localhost|127\.0\.0\.1/.test(url);
-  if (!isLocal && !url.includes("sslmode=")) {
-    url += (url.includes("?") ? "&" : "?") + "sslmode=require";
-  }
-  return url;
-}
+const activeUrl = sanitizeDatabaseUrl(process.env.DATABASE_URL || config.databaseUrl);
+process.env.DATABASE_URL = activeUrl;
 
 export const prisma =
   global.prisma ||
@@ -22,7 +16,7 @@ export const prisma =
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
     datasources: {
       db: {
-        url: resolveDatabaseUrl(),
+        url: activeUrl,
       },
     },
   });
