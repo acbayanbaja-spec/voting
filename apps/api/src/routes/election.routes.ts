@@ -146,7 +146,7 @@ electionRouter.post(
 // ADD Candidate to Election
 const candidateSchema = {
   body: z.object({
-    positionId: z.string().uuid(),
+    positionId: z.string().min(1, "Position ID is required"),
     fullName: z.string().min(2),
     studentId: z.string().min(2),
     partyList: z.string().optional(),

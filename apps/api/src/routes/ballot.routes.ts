@@ -10,12 +10,12 @@ export const ballotRouter = Router();
 
 const castBallotSchema = {
   body: z.object({
-    electionId: z.string().uuid("Invalid election ID"),
+    electionId: z.string().min(1, "Election ID is required"),
     selections: z
       .array(
         z.object({
-          positionId: z.string().uuid("Invalid position ID"),
-          candidateId: z.string().uuid("Invalid candidate ID"),
+          positionId: z.string().min(1, "Position ID is required"),
+          candidateId: z.string().min(1, "Candidate ID is required"),
         })
       )
       .min(1, "At least one candidate selection is required"),

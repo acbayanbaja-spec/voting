@@ -78,9 +78,8 @@ export class BlockchainService {
    * Helper to convert a UUID or string electionId into a bytes32 hex representation.
    */
   public toBytes32(text: string): string {
-    const clean = text.replace(/-/g, "");
-    if (clean.length <= 32) {
-      return ethers.encodeBytes32String(clean);
+    if (text.startsWith("0x") && text.length === 66) {
+      return text;
     }
     return ethers.keccak256(ethers.toUtf8Bytes(text));
   }
