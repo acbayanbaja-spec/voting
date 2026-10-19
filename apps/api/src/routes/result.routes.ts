@@ -1,6 +1,8 @@
 import { Router } from "express";
+import jwt from "jsonwebtoken";
 import { tallyService } from "../services/tally.service";
 import { authenticate, authorize } from "../middlewares/auth";
+import { config } from "../config";
 import { Role, ElectionStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
@@ -19,11 +21,42 @@ resultRouter.get("/:electionId", async (req, res, next) => {
       return;
     }
 
-    // Only allow public viewing if PUBLISHED, otherwise require COMELEC / ADMIN auth
+    // Only allow public viewing if PUBLISHED; unpublished tallies are restricted
+    // to COMELEC officers and system administrators (verified, not just any token).
     if (election.status !== ElectionStatus.PUBLISHED) {
-      // Check auth header manually or pass to optional auth
       const authHeader = req.headers.authorization;
       if (!authHeader) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: "RESULTS_NOT_PUBLISHED",
+            message: "Election results have not been officially published yet.",
+          },
+        });
+        return;
+      }
+
+      // Verify the presented token actually belongs to an authorized officer
+      try {
+        const decoded = jwt.verify(
+          authHeader.split(" ")[1],
+          config.jwtSecret
+        ) as { userId: string };
+        const officer = await prisma.user.findUnique({
+          where: { id: decoded.userId },
+          select: { role: true, isActive: true },
+        });
+        if (!officer || !officer.isActive || (officer.role !== "COMELEC_OFFICER" && officer.role !== "SYSTEM_ADMIN")) {
+          res.status(403).json({
+            success: false,
+            error: {
+              code: "RESULTS_NOT_PUBLISHED",
+              message: "Election results have not been officially published yet.",
+            },
+          });
+          return;
+        }
+      } catch {
         res.status(403).json({
           success: false,
           error: {

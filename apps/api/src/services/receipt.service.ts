@@ -4,6 +4,8 @@ import { generateVerificationCode } from "../utils/crypto";
 
 export interface VerificationResult {
   verified: boolean;
+  /** CONFIRMED_ON_CHAIN | CONFIRMED_IN_DATABASE | PENDING | NOT_FOUND | INVALID */
+  status: string;
   receiptReference: string;
   electionId: string;
   electionTitle: string;
@@ -62,6 +64,7 @@ export class ReceiptService {
     if (!receipt) {
       return {
         verified: false,
+        status: "NOT_FOUND",
         receiptReference: reference,
         electionId: "",
         electionTitle: "",
@@ -90,17 +93,40 @@ export class ReceiptService {
       receipt.receiptReference
     );
 
-    const verified = verificationCodeValid && (onChain.exists || receipt.blockchainStatus !== "FAILED");
+    // Honest status determination:
+    // - CONFIRMED_ON_CHAIN: integrity check passed AND found on the smart contract.
+    // - CONFIRMED_IN_DATABASE: integrity check passed against the system's records.
+    // - PENDING: recorded but blockchain confirmation still outstanding.
+    // - INVALID: the stored record failed the integrity check.
+    let status: string;
+    let verified: boolean;
+    let message: string;
 
-    let message = "Receipt successfully verified against immutable ledger records.";
     if (!verificationCodeValid) {
-      message = "Integrity check failed: Verification code does not match commitment hash.";
+      status = "INVALID";
+      verified = false;
+      message =
+        "Integrity check failed: the verification code does not match this receipt's commitment hash. Report this to the COMELEC committee.";
     } else if (onChain.exists) {
-      message = "Cryptographically verified on smart contract ledger and local database.";
+      status = "CONFIRMED_ON_CHAIN";
+      verified = true;
+      message =
+        "Verified: this receipt's commitment is recorded on the blockchain ledger and matches the system database.";
+    } else if (receipt.blockchainStatus === "PENDING") {
+      status = "PENDING";
+      verified = true;
+      message =
+        "Recorded: the ballot is accepted and stored in the system ledger. Blockchain confirmation is still pending, so no on-chain record is available yet.";
+    } else {
+      status = "CONFIRMED_IN_DATABASE";
+      verified = true;
+      message =
+        "Verified against the system's election records. An on-chain record could not be located for this receipt.";
     }
 
     return {
       verified,
+      status,
       receiptReference: receipt.receiptReference,
       electionId: receipt.electionId,
       electionTitle: receipt.election.title,
