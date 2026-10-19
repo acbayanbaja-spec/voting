@@ -10,6 +10,7 @@ build/
 dist/
 artifacts/
 cache/
+*.tsbuildinfo
 
 # Environment variables
 .env
