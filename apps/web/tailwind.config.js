@@ -8,32 +8,56 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Warm off-white page background
+        paper: {
+          DEFAULT: "#F8F7F2",
+          dark: "#F1EFE8",
+        },
+        // University blue — primary actions and navigation
         brand: {
-          50: "#f0f5ff",
-          100: "#e5edff",
-          200: "#cddbfe",
-          300: "#b4c6fc",
-          400: "#8da2fb",
-          500: "#6875f5",
-          600: "#4f46e5",
-          700: "#3730a3",
-          800: "#1e1b4b",
-          900: "#0f172a",
-          950: "#020617",
+          50: "#F0F5FA",
+          100: "#DCE8F2",
+          200: "#B7CEE3",
+          300: "#8AADD2",
+          400: "#5B8CBF",
+          500: "#3E6FA3",
+          600: "#315E8A",
+          700: "#2A4F74",
+          800: "#24405E",
+          900: "#1F334B",
+          950: "#16223A",
         },
+        // Deep navy — headings and dark accents
         navy: {
-          800: "#0b1528",
-          850: "#081020",
-          900: "#050b18",
-          950: "#030710",
+          DEFAULT: "#233247",
+          100: "#D6DEE8",
+          200: "#AEBED0",
+          300: "#8699B3",
+          400: "#667487",
+          500: "#4E5D70",
+          600: "#3A495C",
+          700: "#2E3D50",
+          800: "#233247",
+          900: "#1D2A3C",
+          950: "#16202E",
         },
-        emerald: {
-          500: "#10b981",
-          600: "#059669",
+        // Natural green — confirmed success
+        leaf: {
+          50: "#EEF6F1",
+          100: "#D8EBE0",
+          200: "#AED7C2",
+          300: "#7DBE9E",
+          400: "#4CA17B",
+          500: "#2E9068",
+          600: "#27835B",
+          700: "#1F6A49",
+          800: "#19533B",
+          900: "#123A29",
         },
-        amber: {
-          500: "#f59e0b",
-          600: "#d97706",
+        // Soft borders
+        line: {
+          DEFAULT: "#E1E5E8",
+          strong: "#CBD3D9",
         },
       },
       fontFamily: {

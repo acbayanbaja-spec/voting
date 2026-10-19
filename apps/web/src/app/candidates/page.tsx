@@ -31,8 +31,8 @@ export default function CandidatesDirectoryPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="max-w-3xl mb-10">
-        <h1 className="text-3xl font-extrabold text-white sm:text-4xl">Candidate Directory</h1>
-        <p className="mt-2 text-sm text-slate-400">
+        <h1 className="text-3xl font-bold text-navy sm:text-4xl">Candidate Directory</h1>
+        <p className="mt-2 text-sm text-navy-400">
           Official candidates certified by COMELEC for the SEAIT Supreme Student Council Elections.
         </p>
       </div>
@@ -40,14 +40,14 @@ export default function CandidatesDirectoryPage() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-64 rounded-2xl bg-slate-900 animate-pulse border border-slate-800" />
+            <div key={i} className="h-64 rounded-2xl bg-white animate-pulse border border-line" />
           ))}
         </div>
       ) : !election || !election.positions || election.positions.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl bg-slate-900 border border-slate-800">
-          <User className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-white">No Candidates Certified</h3>
-          <p className="text-xs text-slate-400 mt-1">
+        <div className="p-12 text-center rounded-2xl bg-white border border-line shadow-sm">
+          <User className="w-12 h-12 text-navy-300 mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-navy">No Candidates Certified</h3>
+          <p className="text-xs text-navy-400 mt-1">
             Candidate filing or certification is currently ongoing with the COMELEC committee.
           </p>
         </div>
@@ -55,10 +55,10 @@ export default function CandidatesDirectoryPage() {
         <div className="space-y-12">
           {election.positions.map((position) => (
             <div key={position.id} className="space-y-4">
-              <div className="flex items-center space-x-3 pb-3 border-b border-slate-800">
-                <span className="w-2.5 h-2.5 rounded-full bg-brand-500" />
-                <h2 className="text-xl font-bold text-white">{position.title}</h2>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+              <div className="flex items-center space-x-3 pb-3 border-b border-line">
+                <span className="w-2.5 h-2.5 rounded-full bg-brand-600" />
+                <h2 className="text-xl font-bold text-navy">{position.title}</h2>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-paper text-navy-500 border border-line">
                   {position.candidates.length} {position.candidates.length === 1 ? "Candidate" : "Candidates"}
                 </span>
               </div>
@@ -67,11 +67,11 @@ export default function CandidatesDirectoryPage() {
                 {position.candidates.map((cand) => (
                   <div
                     key={cand.id}
-                    className="p-6 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors shadow-lg flex flex-col justify-between"
+                    className="p-6 rounded-2xl bg-white border border-line hover:border-line-strong transition-colors shadow-sm flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-center space-x-4 mb-4">
-                        <div className="w-16 h-16 rounded-2xl bg-slate-800 overflow-hidden flex-shrink-0 relative border border-slate-700">
+                        <div className="w-16 h-16 rounded-2xl bg-paper overflow-hidden flex-shrink-0 relative border border-line">
                           {cand.photoUrl ? (
                             <img
                               src={cand.photoUrl}
@@ -79,35 +79,35 @@ export default function CandidatesDirectoryPage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-500">
+                            <div className="w-full h-full flex items-center justify-center text-navy-300">
                               <User className="w-8 h-8" />
                             </div>
                           )}
                         </div>
 
                         <div>
-                          <h3 className="text-lg font-bold text-white">{cand.fullName}</h3>
-                          <p className="text-xs text-brand-400 font-semibold mt-0.5">
+                          <h3 className="text-lg font-bold text-navy">{cand.fullName}</h3>
+                          <p className="text-xs text-brand-600 font-semibold mt-0.5">
                             {cand.partyList || "Independent Candidate"}
                           </p>
-                          <p className="text-[11px] text-slate-500 font-mono">ID: {cand.studentId}</p>
+                          <p className="text-[11px] text-navy-400 font-mono">ID: {cand.studentId}</p>
                         </div>
                       </div>
 
-                      <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 mb-4">
-                        <div className="flex items-center space-x-1.5 text-xs font-semibold text-slate-300 mb-1.5">
-                          <FileText className="w-3.5 h-3.5 text-brand-400" />
+                      <div className="p-3.5 rounded-xl bg-paper border border-line mb-4">
+                        <div className="flex items-center space-x-1.5 text-xs font-semibold text-navy-500 mb-1.5">
+                          <FileText className="w-3.5 h-3.5 text-brand-600" />
                           <span>Candidate Platform & Objectives</span>
                         </div>
-                        <p className="text-xs text-slate-400 leading-relaxed italic">
+                        <p className="text-xs text-navy-400 leading-relaxed italic">
                           "{cand.platform}"
                         </p>
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+                    <div className="pt-3 border-t border-line flex items-center justify-between text-[11px] text-navy-400">
                       <span className="flex items-center space-x-1">
-                        <Shield className="w-3 h-3 text-emerald-500" />
+                        <Shield className="w-3 h-3 text-leaf-600" />
                         <span>COMELEC Verified Profile</span>
                       </span>
                       <span>Position: {position.title}</span>
