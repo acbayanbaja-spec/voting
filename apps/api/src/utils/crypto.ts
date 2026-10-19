@@ -6,6 +6,14 @@ const SALT_ROUNDS = 10;
 const ALGORITHM = "aes-256-gcm";
 
 /**
+ * Derives the 32-byte AES key from ENCRYPTION_KEY via SHA-256 so any
+ * secret (hex or not) yields a valid key length.
+ */
+function getEncryptionKey(): Buffer {
+  return crypto.createHash("sha256").update(config.encryptionKey, "utf8").digest();
+}
+
+/**
  * Hashes a plaintext password using bcrypt with 10 salt rounds.
  */
 export async function hashPassword(password: string): Promise<string> {
@@ -78,7 +86,7 @@ export function generateVerificationCode(receiptRef: string, commitmentHash: str
  */
 export function encryptBallot(data: any): string {
   const iv = crypto.randomBytes(12);
-  const key = Buffer.from(config.encryptionKey.substring(0, 64), "hex");
+  const key = getEncryptionKey();
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
   let encrypted = cipher.update(JSON.stringify(data), "utf8", "hex");
@@ -98,7 +106,7 @@ export function encryptBallot(data: any): string {
  */
 export function decryptBallot(cipherPayload: string): any {
   const { iv, authTag, encryptedData } = JSON.parse(cipherPayload);
-  const key = Buffer.from(config.encryptionKey.substring(0, 64), "hex");
+  const key = getEncryptionKey();
   const decipher = crypto.createDecipheriv(ALGORITHM, key, Buffer.from(iv, "hex"));
   decipher.setAuthTag(Buffer.from(authTag, "hex"));
 
