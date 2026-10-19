@@ -25,7 +25,7 @@ export interface CastBallotResponse {
   receiptReference: string;
   verificationCode: string;
   ballotCommitmentHash: string;
-  blockchainTxHash: string;
+  blockchainTxHash: string | null;
   blockchainStatus: BlockchainStatus;
   submittedAt: string;
 }
@@ -181,8 +181,11 @@ export class BallotService {
         : BlockchainStatus.PENDING;
 
     // 6. Atomic Database Transaction with Strict Privacy Separation
-    const submissionResult = await prisma.$transaction(async (tx) => {
-      // Re-verify eligibility within transaction lock
+    // Remote databases (Supabase pooler) can exceed the default 5s interactive
+    // transaction timeout, so allow generous headroom for the ballot write.
+    const submissionResult = await prisma.$transaction(
+      async (tx) => {
+      // Re-verify eligibility within transaction
       const lockedEligibility = await tx.voterEligibility.findUnique({
         where: {
           electionId_userId: {
@@ -192,23 +195,34 @@ export class BallotService {
         },
       });
 
-      if (!lockedEligibility || lockedEligibility.hasVoted) {
-        const err: any = new Error("Vote collision detected. A ballot was already accepted.");
+      if (!lockedEligibility) {
+        const err: any = new Error("Vote collision detected. Eligibility no longer exists.");
         err.statusCode = 409;
         err.code = "CONCURRENT_VOTE_COLLISION";
         throw err;
       }
 
-      // Mark voter as hasVoted. Store receiptReference so student can re-view their receipt.
-      // NOTE: candidate selections are NOT linked to this record!
-      await tx.voterEligibility.update({
-        where: { id: lockedEligibility.id },
+      // Atomic compare-and-set: only the first concurrent request can flip
+      // hasVoted from false to true. Every other request (double click, extra
+      // tab, retry, or direct API race) sees count === 0 and is rejected.
+      const claim = await tx.voterEligibility.updateMany({
+        where: {
+          id: lockedEligibility.id,
+          hasVoted: false,
+        },
         data: {
           hasVoted: true,
           votedAt: now,
           receiptReference,
         },
       });
+
+      if (claim.count === 0) {
+        const err: any = new Error("Vote collision detected. A ballot was already accepted.");
+        err.statusCode = 409;
+        err.code = "CONCURRENT_VOTE_COLLISION";
+        throw err;
+      }
 
       // Create BallotSubmission without userId foreign key
       const submission = await tx.ballotSubmission.create({
@@ -260,7 +274,9 @@ export class BallotService {
       });
 
       return submission;
-    });
+      },
+      { timeout: 30000, maxWait: 10000 }
+    );
 
     logger.info(`Ballot successfully cast. Receipt: ${receiptReference}, Tx: ${blockchainResult.txHash}`);
 

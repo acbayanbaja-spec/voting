@@ -16,8 +16,8 @@ const VOTING_LEDGER_ABI = [
 ];
 
 export interface BlockchainRecordResult {
-  txHash: string;
-  blockNumber: number;
+  txHash: string | null;
+  blockNumber: number | null;
   status: "CONFIRMED" | "PENDING" | "FAILED";
   network: string;
   chainId: number;
@@ -78,9 +78,8 @@ export class BlockchainService {
    * Helper to convert a UUID or string electionId into a bytes32 hex representation.
    */
   public toBytes32(text: string): string {
-    const clean = text.replace(/-/g, "");
-    if (clean.length <= 32) {
-      return ethers.encodeBytes32String(clean);
+    if (text.startsWith("0x") && text.length === 66) {
+      return text;
     }
     return ethers.keccak256(ethers.toUtf8Bytes(text));
   }
@@ -115,23 +114,26 @@ export class BlockchainService {
         };
       } catch (err: any) {
         logger.error(`Blockchain transaction submission failed: ${err.message}`);
-        // Fall back to recorded pending state with explicit status
+        // Ballot acceptance is governed by the database; without a confirmed
+        // on-chain transaction we return a null hash and PENDING status rather
+        // than fabricating a transaction hash.
         return {
-          txHash: "0x" + ethers.keccak256(ethers.toUtf8Bytes(`${receiptReference}-${Date.now()}`)).substring(2),
-          blockNumber: 0,
+          txHash: null,
+          blockNumber: null,
           status: "PENDING",
-          network: "EVM (Queued for confirmation)",
+          network: "EVM (submission failed; awaiting retry)",
           chainId: config.blockchain.chainId,
         };
       }
     }
 
-    // Truthful offline ledger record
+    // Offline mode: no blockchain node available. Record honestly without a
+    // fabricated transaction hash; the database remains the authoritative ledger.
     return {
-      txHash: "0x" + ethers.keccak256(ethers.toUtf8Bytes(`${receiptReference}-${commitmentHash}`)).substring(2),
-      blockNumber: 0,
+      txHash: null,
+      blockNumber: null,
       status: "PENDING",
-      network: "EVM (Local Ledger Pending Node Sync)",
+      network: "Offline ledger mode (blockchain node not reachable)",
       chainId: config.blockchain.chainId,
     };
   }

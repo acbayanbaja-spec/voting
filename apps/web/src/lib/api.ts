@@ -74,7 +74,16 @@ export async function fetchApi<T = any>(endpoint: string, options: RequestInit =
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const errorMsg = data?.error?.message || `Request failed with status ${response.status}`;
+    let errorMsg = data?.error?.message || `Request failed with status ${response.status}`;
+    if (data?.error?.details && Array.isArray(data.error.details) && data.error.details.length > 0) {
+      const detailsList = data.error.details
+        .map((d: any) => d.message || `${d.field}: invalid`)
+        .filter(Boolean)
+        .join("; ");
+      if (detailsList) {
+        errorMsg = `${errorMsg}: ${detailsList}`;
+      }
+    }
     const err = new Error(errorMsg);
     (err as any).status = response.status;
     (err as any).data = data;

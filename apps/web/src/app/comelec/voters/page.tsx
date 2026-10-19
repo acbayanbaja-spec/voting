@@ -116,8 +116,8 @@ export default function ComelecVotersPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Voter Eligibility Roster</h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-navy tracking-tight">Voter Eligibility Roster</h1>
+          <p className="text-xs text-navy-400 mt-1">
             Manage certified student voters, import authorized CSV rolls, and inspect participation status.
           </p>
         </div>
@@ -128,7 +128,7 @@ export default function ComelecVotersPage() {
               setCsvContent(sampleCsv);
               setShowImportModal(true);
             }}
-            className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs transition-colors flex items-center space-x-1.5 shadow-md shadow-brand-600/20"
+            className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 text-white font-semibold text-xs transition-colors flex items-center space-x-1.5"
           >
             <Upload className="w-4 h-4" />
             <span>Import Voters CSV</span>
@@ -136,7 +136,7 @@ export default function ComelecVotersPage() {
 
           <button
             onClick={handleExportCsv}
-            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors flex items-center space-x-1.5"
+            className="px-4 py-2.5 rounded-xl bg-paper hover:bg-brand-50 text-navy-600 border border-line hover:border-brand-300 text-xs font-semibold transition-colors flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
           >
             <Download className="w-4 h-4" />
             <span>Export Roster</span>
@@ -145,15 +145,15 @@ export default function ComelecVotersPage() {
       </div>
 
       {/* Controls Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+      <div className="p-4 rounded-2xl bg-white border border-line shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
         <div className="w-full sm:w-auto flex items-center space-x-2">
-          <label className="text-xs font-semibold text-slate-400 whitespace-nowrap">
+          <label className="text-xs font-semibold text-navy-400 whitespace-nowrap">
             Election:
           </label>
           <select
             value={selectedElectionId}
             onChange={handleElectionChange}
-            className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:ring-1 focus:ring-brand-500"
+            className="px-3 py-2 rounded-xl bg-white border border-line text-navy text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
           >
             {elections.map((el) => (
               <option key={el.id} value={el.id}>
@@ -169,17 +169,17 @@ export default function ComelecVotersPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search School ID or Name..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs placeholder-slate-500"
+            className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-line text-navy text-xs placeholder-navy-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
           />
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-navy-300" />
         </form>
       </div>
 
       {/* Voters Table */}
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl overflow-hidden">
+      <div className="rounded-2xl bg-white border border-line shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[11px]">
+          <table className="w-full text-left text-xs text-navy-500">
+            <thead className="bg-paper text-navy-400 font-semibold border-b border-line uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="py-3 px-4">School ID</th>
                 <th className="py-3 px-4">Student Name</th>
@@ -189,43 +189,43 @@ export default function ComelecVotersPage() {
                 <th className="py-3 px-4">Timestamp</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/80">
+            <tbody className="divide-y divide-line">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-slate-500">
+                  <td colSpan={6} className="text-center py-8 text-navy-400">
                     Loading voters...
                   </td>
                 </tr>
               ) : voters.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-slate-500">
+                  <td colSpan={6} className="text-center py-8 text-navy-400">
                     No eligible voters found. Import a CSV file to register voters.
                   </td>
                 </tr>
               ) : (
                 voters.map((v) => (
-                  <tr key={v.id} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-white">
+                  <tr key={v.id} className="hover:bg-paper transition-colors">
+                    <td className="py-3 px-4 font-mono font-bold text-navy">
                       {v.user.schoolId}
                     </td>
-                    <td className="py-3 px-4 font-semibold text-slate-200">
+                    <td className="py-3 px-4 font-semibold text-navy-600">
                       {v.user.lastName}, {v.user.firstName}
                     </td>
-                    <td className="py-3 px-4 text-slate-400">{v.user.department}</td>
-                    <td className="py-3 px-4 text-slate-400">{v.user.yearLevel}</td>
+                    <td className="py-3 px-4 text-navy-400">{v.user.department}</td>
+                    <td className="py-3 px-4 text-navy-400">{v.user.yearLevel}</td>
                     <td className="py-3 px-4">
                       {v.hasVoted ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center space-x-1 w-max">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-leaf-50 text-leaf-700 border border-leaf-200 flex items-center space-x-1 w-max">
                           <CheckCircle2 className="w-3 h-3" />
                           <span>BALLOT ACCEPTED</span>
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 w-max block">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-paper text-navy-400 border border-line w-max block">
                           NOT YET CAST
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                    <td className="py-3 px-4 text-navy-400 font-mono text-[11px]">
                       {v.votedAt ? new Date(v.votedAt).toLocaleString() : "—"}
                     </td>
                   </tr>
@@ -238,13 +238,13 @@ export default function ComelecVotersPage() {
 
       {/* Import Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="max-w-2xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4">
-            <h3 className="text-xl font-bold text-white flex items-center space-x-2">
-              <Upload className="w-5 h-5 text-brand-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-900/50">
+          <div className="max-w-2xl w-full bg-white border border-line rounded-3xl p-6 sm:p-8 shadow space-y-4">
+            <h3 className="text-xl font-bold text-navy flex items-center space-x-2">
+              <Upload className="w-5 h-5 text-brand-600" />
               <span>Import Eligible Voter Roster (CSV)</span>
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-navy-400">
               Paste or edit comma-separated student records. Required columns: <code>schoolId, email, firstName, lastName, department, yearLevel</code>.
             </p>
 
@@ -255,16 +255,16 @@ export default function ComelecVotersPage() {
                 value={csvContent}
                 onChange={(e) => setCsvContent(e.target.value)}
                 placeholder="schoolId,email,firstName,lastName,department,yearLevel..."
-                className="w-full p-3 font-mono rounded-xl bg-slate-950 border border-slate-700 text-slate-200 text-xs focus:ring-1 focus:ring-brand-500"
+                className="w-full p-3 font-mono rounded-xl bg-white border border-line text-navy-600 placeholder-navy-300 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
               />
 
               {importResult && (
-                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
-                  <p className="font-semibold text-emerald-400">
+                <div className="p-3.5 rounded-xl bg-paper border border-line text-xs space-y-1">
+                  <p className="font-semibold text-leaf-700">
                     Import Result: {importResult.importedCount} registered, {importResult.skippedCount} skipped.
                   </p>
                   {importResult.errors?.length > 0 && (
-                    <div className="text-rose-400 text-[11px] max-h-24 overflow-y-auto">
+                    <div className="text-rose-600 text-[11px] max-h-24 overflow-y-auto">
                       {importResult.errors.map((err: any, i: number) => (
                         <p key={i}>Row {err.row}: {err.error}</p>
                       ))}
@@ -280,14 +280,14 @@ export default function ComelecVotersPage() {
                     setShowImportModal(false);
                     setImportResult(null);
                   }}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-semibold"
+                  className="flex-1 py-2.5 rounded-xl bg-paper hover:bg-brand-50 text-navy-600 border border-line hover:border-brand-300 font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
                 >
                   Close
                 </button>
                 <button
                   type="submit"
                   disabled={importing}
-                  className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-semibold flex items-center justify-center space-x-1.5"
+                  className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-50 text-white font-semibold flex items-center justify-center space-x-1.5"
                 >
                   {importing ? <span>Importing...</span> : <span>Process & Register</span>}
                 </button>

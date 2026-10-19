@@ -10,7 +10,7 @@ export default function FaqPage() {
     },
     {
       q: "Can I change my vote after submitting my ballot?",
-      a: "No. Once confirmed, your ballot selections are cryptographically committed to the blockchain ledger. To ensure election integrity and prevent tampering, cast ballots cannot be modified or replaced.",
+      a: "No. Once confirmed, your ballot selections are cryptographically committed to the blockchain ledger. To safeguard election integrity, cast ballots cannot be modified or replaced.",
     },
     {
       q: "What do I do if I lose my Verification Reference?",
@@ -33,30 +33,30 @@ export default function FaqPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
       <div className="text-center max-w-2xl mx-auto mb-10">
-        <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 text-xs font-semibold mb-3">
+        <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200 text-xs font-semibold mb-3">
           <HelpCircle className="w-3.5 h-3.5" />
           <span>Voter Help Center</span>
         </div>
-        <h1 className="text-3xl font-extrabold text-white">Frequently Asked Questions</h1>
-        <p className="mt-2 text-sm text-slate-400">
+        <h1 className="text-2xl sm:text-3xl font-bold text-navy">Frequently Asked Questions</h1>
+        <p className="mt-2 text-sm text-navy-400">
           Everything you need to know about participating in SEAIT online student elections.
         </p>
       </div>
 
       <div className="space-y-4">
         {faqs.map((faq, idx) => (
-          <div key={idx} className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-            <h3 className="text-base font-bold text-white">{faq.q}</h3>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">{faq.a}</p>
+          <div key={idx} className="p-6 rounded-2xl bg-white border border-line shadow-sm space-y-2">
+            <h3 className="text-base font-bold text-navy">{faq.q}</h3>
+            <p className="text-xs sm:text-sm text-navy-400 leading-relaxed">{faq.a}</p>
           </div>
         ))}
       </div>
 
-      <div className="mt-12 p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center text-xs text-slate-400">
+      <div className="mt-12 p-6 rounded-2xl bg-paper border border-line text-center text-xs text-navy-400">
         <p>Ready to participate in the active Student Council election?</p>
         <Link
           href="/auth/login"
-          className="mt-3 inline-flex items-center space-x-1.5 text-brand-400 hover:text-brand-300 font-semibold text-sm"
+          className="mt-3 inline-flex items-center space-x-1.5 text-brand-600 hover:text-brand-700 font-semibold text-sm"
         >
           <span>Sign In to Student Portal</span>
           <ArrowRight className="w-4 h-4" />

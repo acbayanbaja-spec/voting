@@ -42,17 +42,19 @@ export function createApp(): Express {
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Allow all Vercel deployments, localhost, and configured origins
+        // Allow configured origins, localhost dev servers, and Vercel previews.
+        // Any other origin is rejected unless CORS_ORIGIN="*" is explicitly set.
         if (
           !origin ||
           allowedOrigins.includes(origin) ||
           origin.includes("vercel.app") ||
           origin.includes("localhost") ||
+          origin.includes("127.0.0.1") ||
           process.env.CORS_ORIGIN === "*"
         ) {
           callback(null, true);
         } else {
-          callback(null, true);
+          callback(new Error(`Origin ${origin} not allowed by CORS policy`));
         }
       },
       credentials: true,
@@ -97,6 +99,22 @@ export function createApp(): Express {
     },
   });
   app.use("/api/v1/auth/login", authLimiter);
+
+  // Rate limiting for account creation to deter automated registration abuse
+  const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      success: false,
+      error: {
+        code: "REGISTER_RATE_LIMIT",
+        message: "Too many registration attempts from this network. Please try again later.",
+      },
+    },
+  });
+  app.use("/api/v1/auth/register", registerLimiter);
 
   // 5. Body Parsers with payload size limits
   app.use(express.json({ limit: "2mb" }));
