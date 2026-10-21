@@ -65,7 +65,8 @@ ballotRouter.get(
       res.json({
         success: true,
         data: {
-          isEligible: !!eligibility,
+          isEligible: eligibility?.status === "APPROVED",
+          status: eligibility?.status || "NOT_REGISTERED",
           hasVoted: eligibility ? eligibility.hasVoted : false,
           votedAt: eligibility?.votedAt || null,
           receiptReference: eligibility?.receiptReference || null,

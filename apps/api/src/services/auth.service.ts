@@ -146,6 +146,22 @@ export class AuthService {
       },
     });
 
+    // Queue the new student for COMELEC approval on every upcoming/live election
+    const pendingElections = await prisma.election.findMany({
+      where: { status: { in: ["SCHEDULED", "OPEN"] } },
+      select: { id: true },
+    });
+    if (pendingElections.length) {
+      await prisma.voterEligibility.createMany({
+        data: pendingElections.map((election) => ({
+          electionId: election.id,
+          userId: user.id,
+          status: "PENDING",
+        })),
+        skipDuplicates: true,
+      });
+    }
+
     return user;
   }
 

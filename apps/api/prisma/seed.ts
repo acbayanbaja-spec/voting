@@ -110,7 +110,9 @@ async function main() {
 
   const election = await prisma.election.upsert({
     where: { id: "e1000000-0000-0000-0000-000000000001" },
-    update: {},
+    // Re-running the seed must reopen the voting window — a stale window is
+    // the usual cause of "outside the authorized voting window" in demos.
+    update: { startTime, endTime },
     create: {
       id: "e1000000-0000-0000-0000-000000000001",
       title: "SEAIT Supreme Student Council General Election 2026-2027",

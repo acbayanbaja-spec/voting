@@ -12,14 +12,27 @@ import {
   XCircle,
   AlertCircle,
   Check,
+  Clock,
+  UserPlus,
+  ShieldCheck,
 } from "lucide-react";
+
+const STATUS_TABS = [
+  { key: "ALL", label: "All" },
+  { key: "PENDING", label: "Pending approval" },
+  { key: "APPROVED", label: "Approved" },
+  { key: "REJECTED", label: "Rejected" },
+];
 
 export default function ComelecVotersPage() {
   const [elections, setElections] = useState<Election[]>([]);
   const [selectedElectionId, setSelectedElectionId] = useState("");
   const [voters, setVoters] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [csvContent, setCsvContent] = useState("");
   const [importResult, setImportResult] = useState<any>(null);
@@ -48,10 +61,14 @@ export default function ComelecVotersPage() {
     init();
   }, []);
 
-  const loadVoters = async (electionId: string, query?: string) => {
+  const loadVoters = async (electionId: string, query?: string, status?: string) => {
     try {
       setLoading(true);
-      const url = `/voters/${electionId}${query ? `?search=${encodeURIComponent(query)}` : ""}`;
+      const params = new URLSearchParams();
+      if (query) params.set("search", query);
+      if (status && status !== "ALL") params.set("status", status);
+      const qs = params.toString();
+      const url = `/voters/${electionId}${qs ? `?${qs}` : ""}`;
       const res = await fetchApi(url);
       if (res.success && res.data) {
         setVoters(res.data.voters);
@@ -63,16 +80,78 @@ export default function ComelecVotersPage() {
     }
   };
 
+  const refresh = () => {
+    if (selectedElectionId) loadVoters(selectedElectionId, search, statusFilter);
+  };
+
   const handleElectionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
     setSelectedElectionId(id);
-    loadVoters(id, search);
+    loadVoters(id, search, statusFilter);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedElectionId) {
-      loadVoters(selectedElectionId, search);
+    refresh();
+  };
+
+  const handleStatusTab = (key: string) => {
+    setStatusFilter(key);
+    if (selectedElectionId) loadVoters(selectedElectionId, search, key);
+  };
+
+  const handleReview = async (voter: any, decision: "APPROVED" | "REJECTED") => {
+    setActionBusy(voter.id);
+    setNotice(null);
+    try {
+      const res = await fetchApi(`/voters/${selectedElectionId}/eligibility/${voter.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ decision }),
+      });
+      if (res.success) {
+        setNotice(
+          `${voter.user.firstName} ${voter.user.lastName} ${
+            decision === "APPROVED" ? "approved to vote" : "rejected"
+          }.`
+        );
+        refresh();
+      }
+    } catch (err: any) {
+      setNotice(err.message || "Failed to update voter decision.");
+    } finally {
+      setActionBusy(null);
+    }
+  };
+
+  const handleApproveAll = async () => {
+    setActionBusy("all");
+    setNotice(null);
+    try {
+      const res = await fetchApi(`/voters/${selectedElectionId}/approve-all`, { method: "POST" });
+      if (res.success) {
+        setNotice(`${res.data.approvedCount} pending voter(s) approved.`);
+        refresh();
+      }
+    } catch (err: any) {
+      setNotice(err.message || "Failed to approve pending voters.");
+    } finally {
+      setActionBusy(null);
+    }
+  };
+
+  const handleEnrollAll = async () => {
+    setActionBusy("enroll");
+    setNotice(null);
+    try {
+      const res = await fetchApi(`/voters/${selectedElectionId}/enroll-all`, { method: "POST" });
+      if (res.success) {
+        setNotice(`${res.data.enrolledCount} registered student(s) added to the roster as approved voters.`);
+        refresh();
+      }
+    } catch (err: any) {
+      setNotice(err.message || "Failed to enroll students.");
+    } finally {
+      setActionBusy(null);
     }
   };
 
@@ -122,7 +201,25 @@ export default function ComelecVotersPage() {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleEnrollAll}
+            disabled={actionBusy === "enroll" || !selectedElectionId}
+            className="px-4 py-2.5 rounded-xl bg-paper hover:bg-brand-50 text-navy-600 border border-line hover:border-brand-300 text-xs font-semibold transition-colors flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-50"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Enroll All Students</span>
+          </button>
+
+          <button
+            onClick={handleApproveAll}
+            disabled={actionBusy === "all" || !selectedElectionId}
+            className="px-4 py-2.5 rounded-xl bg-leaf-600 hover:bg-leaf-700 text-white text-xs font-semibold transition-colors flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-leaf-500 focus:ring-offset-2 disabled:opacity-50"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>{actionBusy === "all" ? "Approving..." : "Approve All Pending"}</span>
+          </button>
+
           <button
             onClick={() => {
               setCsvContent(sampleCsv);
@@ -143,6 +240,13 @@ export default function ComelecVotersPage() {
           </button>
         </div>
       </div>
+
+      {notice && (
+        <div className="mb-6 p-3.5 rounded-xl bg-brand-50 border border-brand-200 text-xs font-semibold text-brand-700 flex items-center space-x-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{notice}</span>
+        </div>
+      )}
 
       {/* Controls Bar */}
       <div className="p-4 rounded-2xl bg-white border border-line shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
@@ -175,6 +279,23 @@ export default function ComelecVotersPage() {
         </form>
       </div>
 
+      {/* Status filter tabs */}
+      <div className="flex items-center gap-2 mb-6 overflow-x-auto">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => handleStatusTab(tab.key)}
+            className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 ${
+              statusFilter === tab.key
+                ? "bg-navy text-white"
+                : "bg-white border border-line text-navy-500 hover:border-brand-300 hover:text-brand-700"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Voters Table */}
       <div className="rounded-2xl bg-white border border-line shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -184,22 +305,25 @@ export default function ComelecVotersPage() {
                 <th className="py-3 px-4">School ID</th>
                 <th className="py-3 px-4">Student Name</th>
                 <th className="py-3 px-4">Department</th>
-                <th className="py-3 px-4">Year Level</th>
+                <th className="py-3 px-4">Approval</th>
                 <th className="py-3 px-4">Voting Status</th>
                 <th className="py-3 px-4">Timestamp</th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-navy-400">
+                  <td colSpan={7} className="text-center py-8 text-navy-400">
                     Loading voters...
                   </td>
                 </tr>
               ) : voters.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-navy-400">
-                    No eligible voters found. Import a CSV file to register voters.
+                  <td colSpan={7} className="text-center py-8 text-navy-400">
+                    {statusFilter === "PENDING"
+                      ? "No students are waiting for approval. New self-registrations appear here automatically."
+                      : "No voter records found. Import a CSV roster or use Enroll All Students."}
                   </td>
                 </tr>
               ) : (
@@ -210,9 +334,30 @@ export default function ComelecVotersPage() {
                     </td>
                     <td className="py-3 px-4 font-semibold text-navy-600">
                       {v.user.lastName}, {v.user.firstName}
+                      <span className="block text-[10px] font-normal text-navy-300">
+                        {v.user.yearLevel}
+                      </span>
                     </td>
                     <td className="py-3 px-4 text-navy-400">{v.user.department}</td>
-                    <td className="py-3 px-4 text-navy-400">{v.user.yearLevel}</td>
+                    <td className="py-3 px-4">
+                      {v.status === "PENDING" && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center space-x-1 w-max">
+                          <Clock className="w-3 h-3" />
+                          <span>PENDING</span>
+                        </span>
+                      )}
+                      {v.status === "APPROVED" && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-700 border border-brand-200 w-max block">
+                          APPROVED
+                        </span>
+                      )}
+                      {v.status === "REJECTED" && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center space-x-1 w-max">
+                          <XCircle className="w-3 h-3" />
+                          <span>REJECTED</span>
+                        </span>
+                      )}
+                    </td>
                     <td className="py-3 px-4">
                       {v.hasVoted ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-leaf-50 text-leaf-700 border border-leaf-200 flex items-center space-x-1 w-max">
@@ -227,6 +372,30 @@ export default function ComelecVotersPage() {
                     </td>
                     <td className="py-3 px-4 text-navy-400 font-mono text-[11px]">
                       {v.votedAt ? new Date(v.votedAt).toLocaleString() : "—"}
+                    </td>
+                    <td className="py-3 px-4">
+                      {!v.hasVoted && (
+                        <div className="flex justify-end gap-2">
+                          {v.status !== "APPROVED" && (
+                            <button
+                              onClick={() => handleReview(v, "APPROVED")}
+                              disabled={actionBusy === v.id}
+                              className="px-2.5 py-1 rounded-lg bg-leaf-600 hover:bg-leaf-700 disabled:opacity-50 text-white text-[10px] font-bold transition-colors"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          {v.status !== "REJECTED" && (
+                            <button
+                              onClick={() => handleReview(v, "REJECTED")}
+                              disabled={actionBusy === v.id}
+                              className="px-2.5 py-1 rounded-lg bg-white border border-rose-200 hover:bg-rose-50 disabled:opacity-50 text-rose-600 text-[10px] font-bold transition-colors"
+                            >
+                              Reject
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))

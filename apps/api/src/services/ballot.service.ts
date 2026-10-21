@@ -87,6 +87,24 @@ export class BallotService {
       throw err;
     }
 
+    if (eligibility.status === "PENDING") {
+      const err: any = new Error(
+        "Your voter registration for this election is awaiting COMELEC approval."
+      );
+      err.statusCode = 403;
+      err.code = "VOTER_PENDING_APPROVAL";
+      throw err;
+    }
+
+    if (eligibility.status === "REJECTED") {
+      const err: any = new Error(
+        "COMELEC did not approve your eligibility for this election. Contact the SEAIT COMELEC office."
+      );
+      err.statusCode = 403;
+      err.code = "VOTER_REJECTED";
+      throw err;
+    }
+
     if (eligibility.hasVoted) {
       const err: any = new Error(
         "A ballot has already been cast and recorded for your account in this election."
@@ -199,6 +217,13 @@ export class BallotService {
         const err: any = new Error("Vote collision detected. Eligibility no longer exists.");
         err.statusCode = 409;
         err.code = "CONCURRENT_VOTE_COLLISION";
+        throw err;
+      }
+
+      if (lockedEligibility.status !== "APPROVED") {
+        const err: any = new Error("COMELEC approval is required before this ballot can be recorded.");
+        err.statusCode = 403;
+        err.code = "VOTER_NOT_APPROVED";
         throw err;
       }
 

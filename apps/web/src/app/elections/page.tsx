@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchApi, Election } from "../../lib/api";
+import { Countdown, TurnoutBar } from "../../components/ElectionLive";
 import { Vote, Calendar, Clock, ArrowRight, BarChart3, CheckCircle2 } from "lucide-react";
 
 export default function ElectionsListPage() {
@@ -23,6 +24,17 @@ export default function ElectionsListPage() {
       }
     }
     load();
+
+    // Live turnout refresh
+    const id = setInterval(async () => {
+      try {
+        const res = await fetchApi("/elections");
+        if (res.success && res.data) setElections(res.data);
+      } catch {
+        // keep last known data on transient failures
+      }
+    }, 30000);
+    return () => clearInterval(id);
   }, []);
 
   const getStatusBadge = (status: string) => {
@@ -90,11 +102,17 @@ export default function ElectionsListPage() {
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                 <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 flex-wrap">
                     <span className="text-xs font-semibold text-brand-600 font-mono">
                       A.Y. {election.academicYear} • {election.semester}
                     </span>
                     {getStatusBadge(election.status)}
+                    {election.status === "OPEN" && (
+                      <Countdown target={election.endTime} label="closes in" />
+                    )}
+                    {election.status === "SCHEDULED" && (
+                      <Countdown target={election.startTime} label="opens in" />
+                    )}
                   </div>
                   <h2 className="text-xl sm:text-2xl font-bold text-navy">{election.title}</h2>
                 </div>
@@ -125,6 +143,17 @@ export default function ElectionsListPage() {
               <p className="text-xs sm:text-sm text-navy-400 leading-relaxed max-w-4xl">
                 {election.description}
               </p>
+
+              {election._count &&
+                election._count.voterEligibilities > 0 &&
+                ["OPEN", "CLOSED", "UNDER_REVIEW", "PUBLISHED"].includes(election.status) && (
+                  <div className="mt-5 max-w-md">
+                    <TurnoutBar
+                      cast={election._count.ballotSubmissions}
+                      eligible={election._count.voterEligibilities}
+                    />
+                  </div>
+                )}
 
               <div className="mt-6 pt-4 border-t border-line flex flex-wrap items-center justify-between gap-4 text-xs text-navy-400">
                 <div className="flex items-center space-x-4">

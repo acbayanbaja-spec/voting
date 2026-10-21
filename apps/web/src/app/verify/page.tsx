@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { fetchApi } from "../../lib/api";
 import {
   ShieldCheck,
@@ -13,24 +14,23 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-export default function VerifyReceiptPage() {
+function VerifyReceiptContent() {
+  const searchParams = useSearchParams();
   const [reference, setReference] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const autoRan = useRef(false);
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reference.trim()) return;
-
+  const runVerify = async (value: string) => {
+    if (!value.trim()) return;
     setLoading(true);
     setError(null);
     setResult(null);
-
     try {
       const res = await fetchApi("/receipts/verify", {
         method: "POST",
-        body: JSON.stringify({ receiptReference: reference.trim().toUpperCase() }),
+        body: JSON.stringify({ receiptReference: value.trim().toUpperCase() }),
       });
 
       if (res.success) {
@@ -41,6 +41,22 @@ export default function VerifyReceiptPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Deep link support: /verify?ref=SEAIT-... auto-fills and verifies
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref && !autoRan.current) {
+      autoRan.current = true;
+      setReference(ref.toUpperCase());
+      runVerify(ref);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runVerify(reference);
   };
 
   const statusMeta: Record<
@@ -219,6 +235,28 @@ export default function VerifyReceiptPage() {
           </div>
         </div>
       )}
+
+      {loading && !result && (
+        <div className="p-8 rounded-2xl bg-white border border-line shadow-sm text-center">
+          <div className="w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-xs text-navy-400">Checking the election ledger…</p>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function VerifyReceiptPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+          <div className="w-10 h-10 border-4 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-navy-400 text-sm">Loading verifier…</p>
+        </div>
+      }
+    >
+      <VerifyReceiptContent />
+    </Suspense>
   );
 }

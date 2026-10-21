@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
 import { fetchApi, Election } from "../../../lib/api";
+import { Countdown, TurnoutBar } from "../../../components/ElectionLive";
 import {
   Vote,
   ShieldCheck,
@@ -15,6 +16,7 @@ import {
   Bell,
   User,
   ExternalLink,
+  XCircle,
 } from "lucide-react";
 
 export default function StudentDashboardPage() {
@@ -70,6 +72,20 @@ export default function StudentDashboardPage() {
       loadData();
     }
   }, [user, isStudent, isLoading, router]);
+
+  // Keep turnout counts fresh while the portal is open
+  useEffect(() => {
+    if (!user || !isStudent) return;
+    const id = setInterval(async () => {
+      try {
+        const elRes = await fetchApi("/elections");
+        if (elRes.success && elRes.data) setElections(elRes.data);
+      } catch {
+        // Transient refresh failure — keep showing the last known data
+      }
+    }, 30000);
+    return () => clearInterval(id);
+  }, [user, isStudent]);
 
   if (isLoading || loading) {
     return (
@@ -139,7 +155,7 @@ export default function StudentDashboardPage() {
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                       <div>
-                        <div className="flex items-center space-x-2 mb-1">
+                        <div className="flex items-center space-x-2 mb-1 flex-wrap">
                           <span className="text-xs font-semibold text-brand-600 font-mono">
                             A.Y. {election.academicYear} • {election.semester}
                           </span>
@@ -151,6 +167,10 @@ export default function StudentDashboardPage() {
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-paper text-navy-400 border border-line">
                               {election.status}
                             </span>
+                          )}
+                          {isOpen && <Countdown target={election.endTime} label="closes in" />}
+                          {election.status === "SCHEDULED" && (
+                            <Countdown target={election.startTime} label="opens in" />
                           )}
                         </div>
                         <h3 className="text-lg font-bold text-navy">{election.title}</h3>
@@ -175,6 +195,16 @@ export default function StudentDashboardPage() {
                             <span>Cast Ballot</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </Link>
+                        ) : elig?.status === "PENDING" ? (
+                          <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold flex items-center space-x-1.5">
+                            <Clock className="w-4 h-4 animate-pulse" />
+                            <span>Awaiting COMELEC Approval</span>
+                          </div>
+                        ) : elig?.status === "REJECTED" ? (
+                          <div className="px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center space-x-1.5">
+                            <XCircle className="w-4 h-4" />
+                            <span>Registration Declined</span>
+                          </div>
                         ) : !isEligible ? (
                           <span className="px-3 py-1.5 rounded-xl bg-paper border border-line text-navy-400 text-xs">
                             Not in Voter Roster
@@ -202,6 +232,25 @@ export default function StudentDashboardPage() {
                           <span>View Receipt</span>
                           <ExternalLink className="w-3 h-3" />
                         </Link>
+                      </div>
+                    )}
+
+                    {!hasVoted && elig?.status === "PENDING" && (
+                      <p className="mt-4 text-[11px] text-navy-400 flex items-center space-x-1.5">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                        <span>
+                          A COMELEC officer is reviewing your registration. This card updates
+                          automatically once you are approved.
+                        </span>
+                      </p>
+                    )}
+
+                    {election._count && election._count.voterEligibilities > 0 && (isOpen || election.status === "CLOSED" || election.status === "UNDER_REVIEW" || election.status === "PUBLISHED") && (
+                      <div className="mt-4">
+                        <TurnoutBar
+                          cast={election._count.ballotSubmissions}
+                          eligible={election._count.voterEligibilities}
+                        />
                       </div>
                     )}
                   </div>

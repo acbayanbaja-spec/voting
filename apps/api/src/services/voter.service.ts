@@ -2,7 +2,7 @@ import { prisma } from "../lib/prisma";
 import { parse } from "csv-parse/sync";
 import { stringify } from "csv-stringify/sync";
 import { hashPassword } from "../utils/crypto";
-import { Role } from "@prisma/client";
+import { EligibilityStatus, Role } from "@prisma/client";
 
 export interface CsvImportResult {
   totalRows: number;
@@ -12,9 +12,19 @@ export interface CsvImportResult {
 }
 
 export class VoterService {
-  async getEligibleVoters(electionId: string, page = 1, limit = 50, search?: string) {
+  async getEligibleVoters(
+    electionId: string,
+    page = 1,
+    limit = 50,
+    search?: string,
+    status?: string
+  ) {
     const skip = (page - 1) * limit;
     const where: any = { electionId };
+
+    if (status && status !== "ALL") {
+      where.status = status as EligibilityStatus;
+    }
 
     if (search) {
       where.user = {
@@ -221,6 +231,110 @@ export class VoterService {
     }));
 
     return stringify(data, { header: true });
+  }
+
+  async reviewEligibility(
+    electionId: string,
+    eligibilityId: string,
+    decision: "APPROVED" | "REJECTED",
+    officerUserId: string
+  ) {
+    const eligibility = await prisma.voterEligibility.findFirst({
+      where: { id: eligibilityId, electionId },
+      include: { user: { select: { schoolId: true, firstName: true, lastName: true } } },
+    });
+
+    if (!eligibility) {
+      const err: any = new Error("Voter record not found in this election roster.");
+      err.statusCode = 404;
+      err.code = "ELIGIBILITY_NOT_FOUND";
+      throw err;
+    }
+
+    if (eligibility.hasVoted) {
+      const err: any = new Error("This voter has already cast a ballot; the decision is final.");
+      err.statusCode = 409;
+      err.code = "VOTER_ALREADY_VOTED";
+      throw err;
+    }
+
+    const updated = await prisma.voterEligibility.update({
+      where: { id: eligibilityId },
+      data: { status: decision, reviewedById: officerUserId, reviewedAt: new Date() },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: officerUserId,
+        action: decision === "APPROVED" ? "VOTER_APPROVED" : "VOTER_REJECTED",
+        entity: "VoterEligibility",
+        entityId: eligibilityId,
+        details: JSON.stringify({
+          electionId,
+          schoolId: eligibility.user.schoolId,
+          name: `${eligibility.user.firstName} ${eligibility.user.lastName}`,
+        }),
+      },
+    });
+
+    return updated;
+  }
+
+  async approveAllPending(electionId: string, officerUserId: string) {
+    const result = await prisma.voterEligibility.updateMany({
+      where: { electionId, status: "PENDING" },
+      data: { status: "APPROVED", reviewedById: officerUserId, reviewedAt: new Date() },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: officerUserId,
+        action: "VOTERS_APPROVED_ALL_PENDING",
+        entity: "Election",
+        entityId: electionId,
+        details: JSON.stringify({ approvedCount: result.count }),
+      },
+    });
+
+    return { approvedCount: result.count };
+  }
+
+  async enrollAllStudents(electionId: string, officerUserId: string) {
+    const election = await prisma.election.findUnique({ where: { id: electionId } });
+    if (!election) {
+      const err: any = new Error("Election not found.");
+      err.statusCode = 404;
+      err.code = "ELECTION_NOT_FOUND";
+      throw err;
+    }
+
+    const students = await prisma.user.findMany({
+      where: { role: Role.STUDENT, isActive: true },
+      select: { id: true },
+    });
+
+    const result = await prisma.voterEligibility.createMany({
+      data: students.map((s) => ({
+        electionId,
+        userId: s.id,
+        status: EligibilityStatus.APPROVED,
+        reviewedById: officerUserId,
+        reviewedAt: new Date(),
+      })),
+      skipDuplicates: true,
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: officerUserId,
+        action: "VOTERS_ENROLLED_ALL_STUDENTS",
+        entity: "Election",
+        entityId: electionId,
+        details: JSON.stringify({ enrolledCount: result.count }),
+      },
+    });
+
+    return { enrolledCount: result.count };
   }
 }
 
