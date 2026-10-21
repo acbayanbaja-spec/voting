@@ -76,6 +76,9 @@ afterAll(async () => {
     if (userId) {
       await prisma.user.deleteMany({ where: { id: userId } });
     }
+    // Per-test voters (rival / late / outsider) live inside test bodies, so a
+    // failing assertion can skip their inline cleanup — sweep them by email tag.
+    await prisma.user.deleteMany({ where: { email: { contains: TEST_TAG } } });
   } catch {
     // best-effort cleanup
   }
