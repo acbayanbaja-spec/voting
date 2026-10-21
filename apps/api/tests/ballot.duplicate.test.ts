@@ -68,9 +68,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // Cascade removes positions, candidates, eligibility, submissions, receipts
+  // Guards: an undefined id would turn deleteMany into a full-table wipe
   try {
-    await prisma.election.deleteMany({ where: { id: electionId } });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    if (electionId) {
+      await prisma.election.deleteMany({ where: { id: electionId } });
+    }
+    if (userId) {
+      await prisma.user.deleteMany({ where: { id: userId } });
+    }
   } catch {
     // best-effort cleanup
   }

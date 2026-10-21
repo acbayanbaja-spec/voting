@@ -35,6 +35,12 @@ enum Priority {
   URGENT
 }
 
+enum EligibilityStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id                  String             @id @default(uuid())
   schoolId            String             @unique
@@ -120,18 +126,22 @@ model Candidate {
 }
 
 model VoterEligibility {
-  id               String    @id @default(uuid())
+  id               String            @id @default(uuid())
   electionId       String
-  election         Election  @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  election         Election          @relation(fields: [electionId], references: [id], onDelete: Cascade)
   userId           String
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hasVoted         Boolean   @default(false)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status           EligibilityStatus @default(APPROVED)
+  reviewedById     String?
+  reviewedAt       DateTime?
+  hasVoted         Boolean           @default(false)
   votedAt          DateTime?
   receiptReference String?
-  createdAt        DateTime  @default(now())
+  createdAt        DateTime          @default(now())
 
   @@unique([electionId, userId])
   @@index([receiptReference])
+  @@index([electionId, status])
   @@map("voter_eligibilities")
 }
 

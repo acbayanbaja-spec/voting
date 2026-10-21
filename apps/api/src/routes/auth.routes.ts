@@ -51,7 +51,7 @@ authRouter.post(
         data: {
           user,
           message:
-            "Account created. Your voter eligibility is confirmed by the COMELEC committee per election.",
+            "Account created. Your voting requests are now pending COMELEC approval for each open election.",
         },
       });
     } catch (err) {

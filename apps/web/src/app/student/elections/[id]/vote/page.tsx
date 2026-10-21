@@ -43,7 +43,13 @@ export default function BallotVotingPage() {
         const elig = await fetchApi(`/ballots/eligibility/${electionId}`);
         if (elig.success && elig.data) {
           if (!elig.data.isEligible) {
-            setError("You are not registered as an eligible voter for this election.");
+            setError(
+              elig.data.status === "PENDING"
+                ? "Your registration is awaiting COMELEC approval. You can cast your ballot as soon as an election officer verifies you against the voter roster."
+                : elig.data.status === "REJECTED"
+                  ? "COMELEC declined your registration for this election. Please contact the COMELEC committee for clarification."
+                  : "You are not registered as an eligible voter for this election."
+            );
             setLoading(false);
             return;
           }
@@ -165,7 +171,7 @@ export default function BallotVotingPage() {
       if (res.success && res.data) {
         // The server has durably accepted the ballot — redirect to the receipt.
         setShowReviewModal(false);
-        router.push(`/student/receipts/${res.data.receiptReference}`);
+        router.push(`/student/receipts/${res.data.receiptReference}?celebrate=1`);
       } else {
         setModalError("The server did not confirm your ballot. Please try again.");
       }
