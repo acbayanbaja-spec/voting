@@ -13,6 +13,7 @@ import {
   Cpu,
   BarChart3,
   FileSpreadsheet,
+  ListChecks,
   PlusCircle,
   ArrowRight,
   ShieldAlert,
@@ -222,7 +223,7 @@ export default function ComelecDashboardPage() {
           </div>
 
           {/* Quick Management Shortcuts */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link
               href="/comelec/voters"
               className="p-5 rounded-2xl bg-white border border-line hover:border-brand-300 transition-colors shadow-sm flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
@@ -234,6 +235,25 @@ export default function ComelecDashboardPage() {
               </div>
               <span className="text-xs text-brand-600 font-semibold mt-4 flex items-center space-x-1">
                 <span>Manage Roster</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </Link>
+
+            <Link
+              href={
+                activeElection
+                  ? `/comelec/elections/${activeElection.id}/ballot`
+                  : "/comelec/elections"
+              }
+              className="p-5 rounded-2xl bg-white border border-line hover:border-brand-300 transition-colors shadow-sm flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+            >
+              <div>
+                <ListChecks className="w-6 h-6 text-navy-500 mb-2" />
+                <h4 className="font-bold text-navy text-sm">Ballot Setup</h4>
+                <p className="text-xs text-navy-400 mt-1">Add, edit or remove positions & candidates</p>
+              </div>
+              <span className="text-xs text-brand-600 font-semibold mt-4 flex items-center space-x-1">
+                <span>Configure Ballot</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </span>
             </Link>

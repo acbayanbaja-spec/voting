@@ -61,7 +61,18 @@ export default function BallotVotingPage() {
 
         const res = await fetchApi(`/elections/${electionId}`);
         if (res.success && res.data) {
-          setElection(res.data);
+          const st = res.data.status;
+          if (st === "OPEN") {
+            setElection(res.data);
+          } else {
+            setError(
+              st === "DRAFT" || st === "SCHEDULED"
+                ? "COMELEC has not opened the polls for this election yet. Your ballot unlocks the moment an officer opens the polls."
+                : st === "CANCELLED"
+                  ? "This election was cancelled by COMELEC."
+                  : "The polls for this election are closed, so no further ballots can be cast."
+            );
+          }
         }
       } catch (err: any) {
         setError(err.message || "Failed to load election ballot.");
@@ -269,7 +280,7 @@ export default function BallotVotingPage() {
                 Official Digital Ballot • A.Y. {election?.academicYear}
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-leaf-50 text-leaf-700 border border-leaf-200">
-                OPEN
+                {election?.status}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-navy">{election?.title}</h1>

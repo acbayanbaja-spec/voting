@@ -4,7 +4,6 @@ import { electionService } from "../services/election.service";
 import { authenticate, authorize } from "../middlewares/auth";
 import { validateRequest } from "../middlewares/validation";
 import { ElectionStatus, Role } from "@prisma/client";
-import { prisma } from "../lib/prisma";
 
 export const electionRouter = Router();
 
@@ -39,6 +38,29 @@ const createElectionSchema = {
     semester: z.string().min(3),
     startTime: z.string().transform((str) => new Date(str)),
     endTime: z.string().transform((str) => new Date(str)),
+    // Optional one-shot ballot setup so an election is never opened empty
+    positions: z
+      .array(
+        z.object({
+          title: z.string().min(2),
+          description: z.string().optional(),
+          orderIndex: z.number().int().min(0).optional(),
+          maxChoices: z.number().int().min(1).default(1),
+          isRequired: z.boolean().default(true),
+          candidates: z
+            .array(
+              z.object({
+                fullName: z.string().min(2),
+                studentId: z.string().min(2),
+                partyList: z.string().optional(),
+                platform: z.string().min(5),
+                photoUrl: z.string().url().optional().or(z.literal("")),
+              })
+            )
+            .optional(),
+        })
+      )
+      .optional(),
   }),
 };
 
@@ -112,14 +134,39 @@ electionRouter.patch(
   }
 );
 
+// DELETE election (COMELEC, ADMIN) — drafts and cancelled polls only
+electionRouter.delete(
+  "/:id",
+  authenticate,
+  authorize([Role.COMELEC_OFFICER, Role.SYSTEM_ADMIN]),
+  async (req, res, next) => {
+    try {
+      const result = await electionService.deleteElection(req.params.id, req.user!.id);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // ADD Position to Election
 const positionSchema = {
   body: z.object({
     title: z.string().min(2),
     description: z.string().optional(),
-    orderIndex: z.number().int().default(0),
+    orderIndex: z.number().int().min(0).optional(),
     maxChoices: z.number().int().min(1).default(1),
     isRequired: z.boolean().default(true),
+  }),
+};
+
+const positionUpdateSchema = {
+  body: z.object({
+    title: z.string().min(2).optional(),
+    description: z.string().optional(),
+    orderIndex: z.number().int().min(0).optional(),
+    maxChoices: z.number().int().min(1).optional(),
+    isRequired: z.boolean().optional(),
   }),
 };
 
@@ -130,13 +177,50 @@ electionRouter.post(
   validateRequest(positionSchema),
   async (req, res, next) => {
     try {
-      const position = await prisma.position.create({
-        data: {
-          electionId: req.params.id,
-          ...req.body,
-        },
-      });
+      const position = await electionService.createPosition(
+        req.params.id,
+        req.body,
+        req.user!.id
+      );
       res.status(201).json({ success: true, data: position });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+electionRouter.patch(
+  "/:id/positions/:positionId",
+  authenticate,
+  authorize([Role.COMELEC_OFFICER, Role.SYSTEM_ADMIN]),
+  validateRequest(positionUpdateSchema),
+  async (req, res, next) => {
+    try {
+      const position = await electionService.updatePosition(
+        req.params.id,
+        req.params.positionId,
+        req.body,
+        req.user!.id
+      );
+      res.json({ success: true, data: position });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+electionRouter.delete(
+  "/:id/positions/:positionId",
+  authenticate,
+  authorize([Role.COMELEC_OFFICER, Role.SYSTEM_ADMIN]),
+  async (req, res, next) => {
+    try {
+      const result = await electionService.deletePosition(
+        req.params.id,
+        req.params.positionId,
+        req.user!.id
+      );
+      res.json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
@@ -155,6 +239,17 @@ const candidateSchema = {
   }),
 };
 
+const candidateUpdateSchema = {
+  body: z.object({
+    positionId: z.string().min(1).optional(),
+    fullName: z.string().min(2).optional(),
+    studentId: z.string().min(2).optional(),
+    partyList: z.string().optional(),
+    platform: z.string().min(5).optional(),
+    photoUrl: z.string().url().optional().or(z.literal("")),
+  }),
+};
+
 electionRouter.post(
   "/:id/candidates",
   authenticate,
@@ -162,13 +257,50 @@ electionRouter.post(
   validateRequest(candidateSchema),
   async (req, res, next) => {
     try {
-      const candidate = await prisma.candidate.create({
-        data: {
-          electionId: req.params.id,
-          ...req.body,
-        },
-      });
+      const candidate = await electionService.createCandidate(
+        req.params.id,
+        req.body,
+        req.user!.id
+      );
       res.status(201).json({ success: true, data: candidate });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+electionRouter.patch(
+  "/:id/candidates/:candidateId",
+  authenticate,
+  authorize([Role.COMELEC_OFFICER, Role.SYSTEM_ADMIN]),
+  validateRequest(candidateUpdateSchema),
+  async (req, res, next) => {
+    try {
+      const candidate = await electionService.updateCandidate(
+        req.params.id,
+        req.params.candidateId,
+        req.body,
+        req.user!.id
+      );
+      res.json({ success: true, data: candidate });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+electionRouter.delete(
+  "/:id/candidates/:candidateId",
+  authenticate,
+  authorize([Role.COMELEC_OFFICER, Role.SYSTEM_ADMIN]),
+  async (req, res, next) => {
+    try {
+      const result = await electionService.deleteCandidate(
+        req.params.id,
+        req.params.candidateId,
+        req.user!.id
+      );
+      res.json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
