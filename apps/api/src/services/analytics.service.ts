@@ -14,7 +14,7 @@ export class AnalyticsService {
       throw err;
     }
 
-    const [totalEligible, acceptedBallots, txStats, voters] = await Promise.all([
+    const [totalEligible, acceptedBallots, txStats, pendingApprovals, voters] = await Promise.all([
       prisma.voterEligibility.count({ where: { electionId } }),
       prisma.ballotSubmission.count({ where: { electionId } }),
       prisma.ballotSubmission.groupBy({
@@ -22,6 +22,7 @@ export class AnalyticsService {
         where: { electionId },
         _count: { id: true },
       }),
+      prisma.voterEligibility.count({ where: { electionId, status: "PENDING" } }),
       prisma.voterEligibility.findMany({
         where: { electionId },
         select: {
@@ -96,6 +97,7 @@ export class AnalyticsService {
       startTime: election.startTime,
       endTime: election.endTime,
       totalEligibleVoters: totalEligible,
+      pendingApprovals,
       acceptedBallots,
       remainingEligibleVoters: remainingVoters,
       turnoutPercentage,

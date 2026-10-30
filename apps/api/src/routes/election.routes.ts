@@ -38,6 +38,8 @@ const createElectionSchema = {
     semester: z.string().min(3),
     startTime: z.string().transform((str) => new Date(str)),
     endTime: z.string().transform((str) => new Date(str)),
+    // On by default: a freshly created poll should be votable by students right away
+    enrollAllStudents: z.boolean().default(true),
     // Optional one-shot ballot setup so an election is never opened empty
     positions: z
       .array(

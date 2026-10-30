@@ -34,6 +34,9 @@ export default function ComelecElectionsPage() {
   const [endTime, setEndTime] = useState(
     new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().substring(0, 16)
   );
+  // A poll nobody can vote in looks broken from a student's phone, so default to
+  // handing the ballot to every active student; later registrants still need approval.
+  const [enrollEveryone, setEnrollEveryone] = useState(true);
 
   const loadElections = async () => {
     try {
@@ -66,6 +69,7 @@ export default function ComelecElectionsPage() {
           semester,
           startTime: new Date(startTime).toISOString(),
           endTime: new Date(endTime).toISOString(),
+          enrollAllStudents: enrollEveryone,
         }),
       });
 
@@ -138,11 +142,11 @@ export default function ComelecElectionsPage() {
           ))}
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6 stagger">
           {elections.map((el) => (
             <div
               key={el.id}
-              className="p-6 rounded-2xl bg-white border border-line shadow-sm space-y-4"
+              className="p-6 rounded-2xl bg-white border border-line shadow-sm space-y-4 card-lift"
             >
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
@@ -217,8 +221,19 @@ export default function ComelecElectionsPage() {
                   <span>End: {new Date(el.endTime).toLocaleString()}</span>
                 </div>
                 {el._count && (
-                  <div className="font-mono text-navy-400">
-                    {el._count.positions} Positions • {el._count.candidates} Candidates • {el._count.ballotSubmissions} Votes
+                  <div className="flex items-center gap-3">
+                    {el.status === "OPEN" && el._count.voterEligibilities === 0 && (
+                      <a
+                        href="/comelec/voters"
+                        className="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold hover:bg-amber-100 transition-colors"
+                      >
+                        No voters enrolled
+                      </a>
+                    )}
+                    <div className="font-mono text-navy-400">
+                      {el._count.positions} Positions • {el._count.candidates} Candidates •{" "}
+                      {el._count.voterEligibilities} Voters • {el._count.ballotSubmissions} Votes
+                    </div>
                   </div>
                 )}
               </div>
@@ -302,6 +317,24 @@ export default function ComelecElectionsPage() {
                   />
                 </div>
               </div>
+
+              <label className="flex items-start space-x-2.5 p-3 rounded-xl bg-paper border border-line cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enrollEveryone}
+                  onChange={(e) => setEnrollEveryone(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-line text-brand-600 focus:ring-2 focus:ring-brand-500"
+                />
+                <span>
+                  <span className="block font-semibold text-navy">
+                    Open the roster to every active student
+                  </span>
+                  <span className="block text-[11px] text-navy-400 mt-0.5 leading-relaxed">
+                    Recommended. Everyone already registered can vote as soon as you open the
+                    polls. Students who sign up later still wait in your approval queue.
+                  </span>
+                </span>
+              </label>
 
               <div className="flex gap-3 pt-3">
                 <button

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "../../../../../context/AuthContext";
 import { fetchApi, Election, Position, Candidate } from "../../../../../lib/api";
@@ -11,6 +12,7 @@ import {
   ArrowRight,
   ArrowLeft,
   User,
+  UserPlus,
   AlertTriangle,
   Lock,
   ClipboardCheck,
@@ -29,6 +31,8 @@ export default function BallotVotingPage() {
   const [error, setError] = useState<string | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [canRequestRoster, setCanRequestRoster] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -43,12 +47,13 @@ export default function BallotVotingPage() {
         const elig = await fetchApi(`/ballots/eligibility/${electionId}`);
         if (elig.success && elig.data) {
           if (!elig.data.isEligible) {
+            setCanRequestRoster(!!elig.data.canRequestRosterAccess);
             setError(
               elig.data.status === "PENDING"
                 ? "Your registration is awaiting COMELEC approval. You can cast your ballot as soon as an election officer verifies you against the voter roster."
                 : elig.data.status === "REJECTED"
                   ? "COMELEC declined your registration for this election. Please contact the COMELEC committee for clarification."
-                  : "You are not registered as an eligible voter for this election."
+                  : "You are not on the voter roster for this election yet. This ballot was built before your account joined the roster — send a request and an officer can approve you in seconds."
             );
             setLoading(false);
             return;
@@ -233,10 +238,49 @@ export default function BallotVotingPage() {
   if (error && !election) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-        <div className="p-8 rounded-2xl bg-white border border-line shadow-sm">
-          <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
-          <h2 className="text-xl font-bold text-navy">Ballot Inaccessible</h2>
-          <p className="text-sm text-navy-400 mt-2">{error}</p>
+        <div className="p-8 rounded-2xl bg-white border border-line shadow-sm animate-pop-in">
+          <AlertCircle
+            className={`w-10 h-10 mx-auto mb-3 ${requesting ? "text-amber-500" : "text-rose-500"}`}
+          />
+          <h2 className="text-xl font-bold text-navy">
+            {requesting ? "Request sent" : "Ballot Inaccessible"}
+          </h2>
+          <p className="text-sm text-navy-400 mt-2 leading-relaxed">
+            {requesting
+              ? "A COMELEC officer has your request in the approval queue. Your ballot unlocks the moment you are approved."
+              : error}
+          </p>
+
+          {canRequestRoster && !requesting && (
+            <button
+              onClick={async () => {
+                setRequesting(true);
+                try {
+                  await fetchApi(`/ballots/eligibility/${electionId}/request`, {
+                    method: "POST",
+                  });
+                  setCanRequestRoster(false);
+                } catch (err: any) {
+                  setRequesting(false);
+                  setError(err.message || "COMELEC could not receive your request.");
+                }
+              }}
+              className="mt-5 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-all hover:-translate-y-0.5 hover:shadow-md inline-flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Request to Vote</span>
+            </button>
+          )}
+
+          <div className="mt-6">
+            <Link
+              href="/student/dashboard"
+              className="inline-flex items-center space-x-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to my elections</span>
+            </Link>
+          </div>
         </div>
       </div>
     );

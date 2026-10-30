@@ -22,6 +22,14 @@ export default function ComelecTallyPage() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Result bars sweep out from zero once the tally paints, so the winner reads instantly
+  const [barsReady, setBarsReady] = useState(false);
+
+  useEffect(() => {
+    if (!tally) return;
+    const frame = requestAnimationFrame(() => setBarsReady(true));
+    return () => cancelAnimationFrame(frame);
+  }, [tally]);
 
   const loadTally = async () => {
     try {
@@ -165,12 +173,13 @@ export default function ComelecTallyPage() {
               {pos.candidates.map((cand: any) => (
                 <div
                   key={cand.candidateId}
-                  className={`p-3.5 rounded-xl border flex items-center justify-between text-xs ${
+                  className={`p-3.5 rounded-xl border text-xs ${
                     cand.isWinner
                       ? "bg-leaf-50 border-leaf-200"
                       : "bg-paper border-line"
                   }`}
                 >
+                  <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <span className="w-6 h-6 rounded bg-white border border-line flex items-center justify-center font-bold text-navy-500">
                       #{cand.rank}
@@ -193,6 +202,18 @@ export default function ComelecTallyPage() {
                       {cand.voteCount} {cand.voteCount === 1 ? "vote" : "votes"}
                     </span>
                     <span className="text-navy-400 text-[11px] block">{cand.percentage}%</span>
+                  </div>
+                  </div>
+
+                  <div className="mt-2.5 h-1.5 rounded-full bg-white border border-line overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-[width] duration-[900ms] ease-out ${
+                        cand.isWinner
+                          ? "bg-gradient-to-r from-leaf-500 to-leaf-600"
+                          : "bg-gradient-to-r from-brand-400 to-brand-600"
+                      }`}
+                      style={{ width: `${barsReady ? cand.percentage : 0}%` }}
+                    />
                   </div>
                 </div>
               ))}
