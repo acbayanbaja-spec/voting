@@ -55,7 +55,9 @@ export class BallotService {
 
     if (election.status !== ElectionStatus.OPEN) {
       const err: any = new Error(
-        `Voting is not permitted. Current election status is ${election.status}.`
+        election.status === ElectionStatus.DRAFT || election.status === ElectionStatus.SCHEDULED
+          ? "COMELEC has not opened the polls for this election yet."
+          : "The polls for this election are no longer open, so no further ballots can be cast."
       );
       err.statusCode = 400;
       err.code = "ELECTION_NOT_OPEN";
@@ -64,7 +66,11 @@ export class BallotService {
 
     const now = new Date();
     if (now < election.startTime || now > election.endTime) {
-      const err: any = new Error("Current time is outside the authorized voting window.");
+      const err: any = new Error(
+        now < election.startTime
+          ? `Voting opens at ${election.startTime.toLocaleString()}. The ballot unlocks automatically at that time.`
+          : `Voting closed at ${election.endTime.toLocaleString()}. Results are certified by COMELEC.`
+      );
       err.statusCode = 400;
       err.code = "OUTSIDE_VOTING_WINDOW";
       throw err;

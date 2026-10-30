@@ -13,6 +13,7 @@ import {
   Cpu,
   BarChart3,
   FileSpreadsheet,
+  ListChecks,
   PlusCircle,
   ArrowRight,
   ShieldAlert,
@@ -166,11 +167,19 @@ export default function ComelecDashboardPage() {
             <Cpu className="w-4 h-4 text-amber-600" />
           </div>
           <p className="text-base sm:text-lg font-bold text-navy mt-2 flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-leaf-600 animate-pulse" />
-            <span>{blockchainStats?.connected ? "Node Synced" : "Ledger Online"}</span>
+            <span
+              className={`w-2 h-2 rounded-full ${
+                blockchainStats?.connected ? "bg-leaf-600 animate-pulse" : "bg-rose-500"
+              }`}
+            />
+            <span className={blockchainStats?.connected ? undefined : "text-rose-700"}>
+              {blockchainStats?.connected ? "Node Synced" : "Node Offline"}
+            </span>
           </p>
           <p className="text-[11px] text-navy-400 mt-1">
-            {analytics?.transactions?.confirmed ?? 0} confirmed commitments
+            {blockchainStats?.connected
+              ? `${analytics?.transactions?.confirmed ?? 0} confirmed commitments`
+              : "Committing ballots to the local ledger table"}
           </p>
         </div>
       </div>
@@ -214,7 +223,7 @@ export default function ComelecDashboardPage() {
           </div>
 
           {/* Quick Management Shortcuts */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link
               href="/comelec/voters"
               className="p-5 rounded-2xl bg-white border border-line hover:border-brand-300 transition-colors shadow-sm flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
@@ -226,6 +235,25 @@ export default function ComelecDashboardPage() {
               </div>
               <span className="text-xs text-brand-600 font-semibold mt-4 flex items-center space-x-1">
                 <span>Manage Roster</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </Link>
+
+            <Link
+              href={
+                activeElection
+                  ? `/comelec/elections/${activeElection.id}/ballot`
+                  : "/comelec/elections"
+              }
+              className="p-5 rounded-2xl bg-white border border-line hover:border-brand-300 transition-colors shadow-sm flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+            >
+              <div>
+                <ListChecks className="w-6 h-6 text-navy-500 mb-2" />
+                <h4 className="font-bold text-navy text-sm">Ballot Setup</h4>
+                <p className="text-xs text-navy-400 mt-1">Add, edit or remove positions & candidates</p>
+              </div>
+              <span className="text-xs text-brand-600 font-semibold mt-4 flex items-center space-x-1">
+                <span>Configure Ballot</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </span>
             </Link>
@@ -313,8 +341,28 @@ export default function ComelecDashboardPage() {
 
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between">
+                <span className="text-navy-400">RPC Connection:</span>
+                <span
+                  className={`font-bold ${
+                    blockchainStats?.connected ? "text-leaf-700" : "text-rose-700"
+                  }`}
+                >
+                  {blockchainStats?.connected ? "Connected" : "Offline"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-navy-400">Signing Wallet:</span>
+                <span
+                  className={`font-bold ${blockchainStats?.hasSigner ? "text-leaf-700" : "text-amber-700"}`}
+                >
+                  {blockchainStats?.hasSigner ? "Configured" : "Not configured"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
                 <span className="text-navy-400">Network:</span>
-                <span className="font-mono text-navy-600">EVM Chain ({blockchainStats?.chainId || 31337})</span>
+                <span className="font-mono text-navy-600">
+                  {blockchainStats?.chainId ? `EVM Chain (${blockchainStats.chainId})` : "Not set"}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-navy-400">Total Transactions:</span>
@@ -331,9 +379,15 @@ export default function ComelecDashboardPage() {
               <div className="pt-2 border-t border-line">
                 <span className="text-navy-400 block text-[11px] mb-0.5">Contract Address:</span>
                 <span className="font-mono text-[11px] text-navy-500 break-all">
-                  {blockchainStats?.contractAddress || "0x5FbDB2315678afecb367f032d93F642f64180aa3"}
+                  {blockchainStats?.contractAddress || "No contract address configured"}
                 </span>
               </div>
+              {!blockchainStats?.connected && (
+                <p className="text-[11px] text-navy-400 leading-relaxed">
+                  Ballots stay valid: each commitment is hashed and stored in the database ledger.
+                  On-chain confirmation resumes when an EVM node becomes reachable.
+                </p>
+              )}
             </div>
           </div>
         </div>

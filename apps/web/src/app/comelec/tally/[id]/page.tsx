@@ -43,7 +43,7 @@ export default function ComelecTallyPage() {
   const handlePublish = async () => {
     if (
       !confirm(
-        "Are you sure you want to certify and publish these election results? This action will seal the results commitment on the blockchain and make them publicly accessible to all students."
+        "Certify and publish these results? The certified tally becomes publicly visible to all students and its commitment hash is recorded in the election ledger."
       )
     ) {
       return;
@@ -189,7 +189,9 @@ export default function ComelecTallyPage() {
                   </div>
 
                   <div className="text-right">
-                    <span className="font-bold text-navy">{cand.voteCount} votes</span>
+                    <span className="font-bold text-navy">
+                      {cand.voteCount} {cand.voteCount === 1 ? "vote" : "votes"}
+                    </span>
                     <span className="text-navy-400 text-[11px] block">{cand.percentage}%</span>
                   </div>
                 </div>

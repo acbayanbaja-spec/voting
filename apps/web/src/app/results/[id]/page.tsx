@@ -161,7 +161,9 @@ export default function ElectionResultsPage() {
                     </div>
 
                     <div className="text-right">
-                      <span className="text-sm font-bold text-navy">{cand.voteCount} votes</span>
+                      <span className="text-sm font-bold text-navy">
+                        {cand.voteCount} {cand.voteCount === 1 ? "vote" : "votes"}
+                      </span>
                       <span className="text-xs text-navy-400 block">{cand.percentage}%</span>
                     </div>
                   </div>

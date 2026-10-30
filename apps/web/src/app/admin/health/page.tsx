@@ -55,8 +55,14 @@ export default function SystemHealthPage() {
                 <p className="text-xs text-navy-400">Node.js Express REST Backend</p>
               </div>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-leaf-50 text-leaf-700 border border-leaf-200">
-              {health?.status || "HEALTHY"}
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                health?.status === "HEALTHY"
+                  ? "bg-leaf-50 text-leaf-700 border-leaf-200"
+                  : "bg-rose-50 text-rose-700 border-rose-200"
+              }`}
+            >
+              {health?.status || "UNKNOWN"}
             </span>
           </div>
 
@@ -68,26 +74,48 @@ export default function SystemHealthPage() {
               </div>
               <p className="text-xs text-navy-400">
                 Connection Status:{" "}
-                <span className="font-bold text-leaf-700">
-                  {health?.database?.status || "UP"}
+                <span
+                  className={`font-bold ${
+                    health?.database?.status === "UP" ? "text-leaf-700" : "text-rose-700"
+                  }`}
+                >
+                  {health?.database?.status || "UNKNOWN"}
                 </span>
               </p>
               <p className="text-xs text-navy-400 mt-1">Engine: Supabase / PostgreSQL</p>
             </div>
 
             <div className="p-5 rounded-2xl bg-white border border-line">
-              <div className="flex items-center space-x-2 text-leaf-600 mb-2">
-                <Cpu className="w-4 h-4" />
-                <h4 className="font-bold text-sm text-navy">Blockchain EVM Ledger</h4>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2 text-brand-600">
+                  <Cpu className="w-4 h-4" />
+                  <h4 className="font-bold text-sm text-navy">Blockchain EVM Ledger</h4>
+                </div>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                    health?.blockchain?.connected
+                      ? "bg-leaf-50 text-leaf-700 border-leaf-200"
+                      : "bg-rose-50 text-rose-700 border-rose-200"
+                  }`}
+                >
+                  {health?.blockchain?.connected ? "CONNECTED" : "OFFLINE"}
+                </span>
               </div>
               <p className="text-xs text-navy-400">
                 Network:{" "}
                 <span className="font-bold text-navy">
-                  Chain ID {health?.blockchain?.networkChainId || 31337}
+                  {health?.blockchain?.networkChainId
+                    ? `Chain ID ${health.blockchain.networkChainId}`
+                    : "Not configured"}
                 </span>
               </p>
               <p className="text-xs text-navy-400 mt-1 font-mono truncate">
-                Contract: {health?.blockchain?.contractAddress || "VotingLedger"}
+                Contract: {health?.blockchain?.contractAddress || "Not deployed"}
+              </p>
+              <p className="text-[11px] text-navy-400 mt-2 leading-relaxed">
+                {health?.blockchain?.connected
+                  ? "Vote commitments are submitted to the smart contract."
+                  : "No EVM node reachable — commitments are recorded in the database ledger instead."}
               </p>
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { fetchApi, Election } from "../../../lib/api";
 import {
   Vote,
@@ -13,9 +14,12 @@ import {
   ChevronRight,
   ShieldCheck,
   RefreshCw,
+  ListChecks,
+  Trash2,
 } from "lucide-react";
 
 export default function ComelecElectionsPage() {
+  const router = useRouter();
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -70,6 +74,7 @@ export default function ComelecElectionsPage() {
         setTitle("");
         setDescription("");
         loadElections();
+        if (res.data?.id) router.push(`/comelec/elections/${res.data.id}/ballot`);
       }
     } catch (err: any) {
       setError(err.message || "Failed to create election.");
@@ -77,16 +82,26 @@ export default function ComelecElectionsPage() {
   };
 
   const handleTransitionStatus = async (electionId: string, newStatus: string) => {
+    setError(null);
     try {
-      const res = await fetchApi(`/elections/${electionId}/status`, {
+      await fetchApi(`/elections/${electionId}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.success) {
-        loadElections();
-      }
+      await loadElections();
     } catch (err: any) {
-      alert(`Status transition error: ${err.message}`);
+      setError(err.message || "Status transition failed.");
+    }
+  };
+
+  const handleDeleteElection = async (electionId: string, title: string) => {
+    if (!window.confirm(`Delete the draft election "${title}"? Its positions and candidates are removed too.`)) return;
+    setError(null);
+    try {
+      await fetchApi(`/elections/${electionId}`, { method: "DELETE" });
+      await loadElections();
+    } catch (err: any) {
+      setError(err.message || "The election could not be deleted.");
     }
   };
 
@@ -145,7 +160,23 @@ export default function ComelecElectionsPage() {
 
                 {/* Status Transitions */}
                 <div className="flex flex-wrap items-center gap-2">
-                  {el.status === "DRAFT" && (
+                  <a
+                    href={`/comelec/elections/${el.id}/ballot`}
+                    className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-paper text-navy-600 border border-line hover:border-brand-300 font-semibold text-xs transition-colors flex items-center space-x-1.5"
+                  >
+                    <ListChecks className="w-3.5 h-3.5" />
+                    <span>Ballot Setup</span>
+                  </a>
+                  {el.status !== "PUBLISHED" && (el._count?.ballotSubmissions ?? 0) === 0 && (
+                    <button
+                      onClick={() => handleDeleteElection(el.id, el.title)}
+                      className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-rose-50 text-rose-700 border border-line hover:border-rose-200 font-semibold text-xs transition-colors flex items-center space-x-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
+                    </button>
+                  )}
+                  {(el.status === "DRAFT" || el.status === "SCHEDULED") && (
                     <button
                       onClick={() => handleTransitionStatus(el.id, "OPEN")}
                       className="px-3.5 py-1.5 rounded-lg bg-leaf-600 hover:bg-leaf-700 focus:outline-none focus:ring-2 focus:ring-leaf-500 focus:ring-offset-2 text-white font-semibold text-xs transition-colors"
