@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { ballotService } from "../services/ballot.service";
+import { voterService } from "../services/voter.service";
 import { authenticate, authorize } from "../middlewares/auth";
 import { validateRequest } from "../middlewares/validation";
 import { Role } from "@prisma/client";
@@ -53,25 +54,56 @@ ballotRouter.get(
   authenticate,
   async (req, res, next) => {
     try {
-      const eligibility = await prisma.voterEligibility.findUnique({
-        where: {
-          electionId_userId: {
-            electionId: req.params.electionId,
-            userId: req.user!.id,
+      const [eligibility, election] = await Promise.all([
+        prisma.voterEligibility.findUnique({
+          where: {
+            electionId_userId: {
+              electionId: req.params.electionId,
+              userId: req.user!.id,
+            },
           },
-        },
-      });
+        }),
+        prisma.election.findUnique({
+          where: { id: req.params.electionId },
+          select: { status: true },
+        }),
+      ]);
+
+      const status = eligibility?.status || "NOT_REGISTERED";
+      const pollsAcceptingVoters =
+        election?.status === "OPEN" || election?.status === "SCHEDULED";
 
       res.json({
         success: true,
         data: {
-          isEligible: eligibility?.status === "APPROVED",
-          status: eligibility?.status || "NOT_REGISTERED",
+          isEligible: status === "APPROVED",
+          status,
+          electionStatus: election?.status || null,
+          // Students off the roster are not dead-ended: they can ask to be added
+          canRequestRosterAccess: status === "NOT_REGISTERED" && pollsAcceptingVoters,
           hasVoted: eligibility ? eligibility.hasVoted : false,
           votedAt: eligibility?.votedAt || null,
           receiptReference: eligibility?.receiptReference || null,
         },
       });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /eligibility/:electionId/request - Student asks COMELEC to be added to the roster
+ballotRouter.post(
+  "/eligibility/:electionId/request",
+  authenticate,
+  authorize([Role.STUDENT]),
+  async (req, res, next) => {
+    try {
+      const result = await voterService.requestRosterInclusion(
+        req.params.electionId,
+        req.user!.id
+      );
+      res.status(201).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }

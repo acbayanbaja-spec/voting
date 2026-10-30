@@ -2,7 +2,7 @@ import { prisma } from "../lib/prisma";
 import { parse } from "csv-parse/sync";
 import { stringify } from "csv-stringify/sync";
 import { hashPassword } from "../utils/crypto";
-import { EligibilityStatus, Role } from "@prisma/client";
+import { EligibilityStatus, ElectionStatus, Role } from "@prisma/client";
 
 export interface CsvImportResult {
   totalRows: number;
@@ -297,6 +297,69 @@ export class VoterService {
     });
 
     return { approvedCount: result.count };
+  }
+
+  /**
+   * A student who was not on the roster when COMELEC built the ballot — they
+   * registered later, or the imported roster missed them — otherwise hits a dead
+   * end with no way to vote. This enrolls them into the same approval queue the
+   * registration flow uses, so an officer decides instead of the system silently
+   * excluding them.
+   */
+  async requestRosterInclusion(electionId: string, userId: string) {
+    const election = await prisma.election.findUnique({
+      where: { id: electionId },
+      select: { id: true, status: true, title: true },
+    });
+
+    if (!election) {
+      const err: any = new Error("Election not found.");
+      err.statusCode = 404;
+      err.code = "ELECTION_NOT_FOUND";
+      throw err;
+    }
+
+    if (election.status !== ElectionStatus.OPEN && election.status !== ElectionStatus.SCHEDULED) {
+      const err: any = new Error(
+        `The voter roster for "${election.title}" is closed because this election is ${election.status}.`
+      );
+      err.statusCode = 409;
+      err.code = "ROSTER_CLOSED";
+      throw err;
+    }
+
+    const student = await prisma.user.findFirst({
+      where: { id: userId, role: Role.STUDENT, isActive: true },
+      select: { id: true },
+    });
+
+    if (!student) {
+      const err: any = new Error("Only active student accounts can request roster access.");
+      err.statusCode = 403;
+      err.code = "NOT_A_STUDENT";
+      throw err;
+    }
+
+    const existing = await prisma.voterEligibility.findUnique({
+      where: { electionId_userId: { electionId, userId } },
+    });
+    if (existing) return { status: existing.status, created: false };
+
+    await prisma.voterEligibility.create({
+      data: { electionId, userId, status: EligibilityStatus.PENDING },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: "VOTER_ROSTER_REQUESTED",
+        entity: "Election",
+        entityId: electionId,
+        details: JSON.stringify({ electionTitle: election.title }),
+      },
+    });
+
+    return { status: EligibilityStatus.PENDING, created: true };
   }
 
   async enrollAllStudents(electionId: string, officerUserId: string) {

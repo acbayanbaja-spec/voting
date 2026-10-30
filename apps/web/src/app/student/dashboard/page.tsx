@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Bell,
   User,
+  UserPlus,
   ExternalLink,
   XCircle,
 } from "lucide-react";
@@ -26,6 +27,35 @@ export default function StudentDashboardPage() {
   const [eligibilityMap, setEligibilityMap] = useState<Record<string, any>>({});
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [requesting, setRequesting] = useState<string | null>(null);
+  const [panelError, setPanelError] = useState<string | null>(null);
+
+  async function loadEligibility(ids: string[]) {
+    const entries = await Promise.all(
+      ids.map(async (id) => {
+        try {
+          const res = await fetchApi(`/ballots/eligibility/${id}`);
+          return [id, res.success ? res.data : null] as const;
+        } catch {
+          return [id, null] as const;
+        }
+      })
+    );
+    setEligibilityMap(Object.fromEntries(entries.filter(([, v]) => v)));
+  }
+
+  const requestRosterAccess = async (electionId: string) => {
+    setRequesting(electionId);
+    setPanelError(null);
+    try {
+      await fetchApi(`/ballots/eligibility/${electionId}/request`, { method: "POST" });
+      await loadEligibility([electionId]);
+    } catch (err: any) {
+      setPanelError(err.message || "COMELEC could not receive your request. Try again.");
+    } finally {
+      setRequesting(null);
+    }
+  };
 
   useEffect(() => {
     if (!isLoading && (!user || !isStudent)) {
@@ -42,20 +72,7 @@ export default function StudentDashboardPage() {
 
         if (elRes.success && elRes.data) {
           setElections(elRes.data);
-
-          // Check eligibility for each election
-          const eligMap: Record<string, any> = {};
-          for (const el of elRes.data) {
-            try {
-              const eligRes = await fetchApi(`/ballots/eligibility/${el.id}`);
-              if (eligRes.success) {
-                eligMap[el.id] = eligRes.data;
-              }
-            } catch {
-              // Ignore individual failure
-            }
-          }
-          setEligibilityMap(eligMap);
+          await loadEligibility(elRes.data.map((el: Election) => el.id));
         }
 
         if (annRes.success && annRes.data) {
@@ -134,6 +151,16 @@ export default function StudentDashboardPage() {
             <span className="text-xs text-navy-400">{elections.length} Active Listing</span>
           </div>
 
+          {panelError && (
+            <div
+              className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start space-x-2 animate-pop-in"
+              role="alert"
+            >
+              <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <p className="leading-relaxed">{panelError}</p>
+            </div>
+          )}
+
           {elections.length === 0 ? (
             <div className="p-8 text-center rounded-2xl bg-white border border-line">
               <Vote className="w-10 h-10 text-navy-300 mx-auto mb-2" />
@@ -141,7 +168,7 @@ export default function StudentDashboardPage() {
               <p className="text-xs text-navy-400 mt-1">No elections currently open for voting.</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 stagger">
               {elections.map((election) => {
                 const elig = eligibilityMap[election.id];
                 const hasVoted = elig?.hasVoted;
@@ -151,7 +178,7 @@ export default function StudentDashboardPage() {
                 return (
                   <div
                     key={election.id}
-                    className="p-6 rounded-2xl bg-white border border-line hover:border-brand-300 transition-colors shadow-sm"
+                    className="p-6 rounded-2xl bg-white border border-line hover:border-brand-300 shadow-sm card-lift"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                       <div>
@@ -205,6 +232,19 @@ export default function StudentDashboardPage() {
                             <XCircle className="w-4 h-4" />
                             <span>Registration Declined</span>
                           </div>
+                        ) : elig?.canRequestRosterAccess ? (
+                          <button
+                            onClick={() => requestRosterAccess(election.id)}
+                            disabled={requesting === election.id}
+                            className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-semibold text-xs transition-all hover:-translate-y-0.5 hover:shadow-md flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                          >
+                            <UserPlus
+                              className={`w-4 h-4 ${requesting === election.id ? "animate-spin" : ""}`}
+                            />
+                            <span>
+                              {requesting === election.id ? "Sending…" : "Request to Vote"}
+                            </span>
+                          </button>
                         ) : !isEligible ? (
                           <span className="px-3 py-1.5 rounded-xl bg-paper border border-line text-navy-400 text-xs">
                             Not in Voter Roster
@@ -233,6 +273,17 @@ export default function StudentDashboardPage() {
                           <ExternalLink className="w-3 h-3" />
                         </Link>
                       </div>
+                    )}
+
+                    {!hasVoted && elig?.canRequestRosterAccess && (
+                      <p className="mt-4 text-[11px] text-navy-400 flex items-start space-x-1.5">
+                        <UserPlus className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <span>
+                          You are an active SEAIT student, but this ballot was built before you
+                          joined the roster. Send a request and a COMELEC officer can approve you
+                          in seconds.
+                        </span>
+                      </p>
                     )}
 
                     {!hasVoted && elig?.status === "PENDING" && (

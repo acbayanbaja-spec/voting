@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma";
 import { ElectionStatus, Position } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { tallyService } from "./tally.service";
+import { voterService } from "./voter.service";
 
 export interface PositionInput {
   title: string;
@@ -27,6 +28,7 @@ export interface CreateElectionInput {
   semester: string;
   startTime: Date;
   endTime: Date;
+  enrollAllStudents?: boolean;
   positions?: Array<PositionInput & { candidates?: Array<Omit<CandidateInput, "positionId">> }>;
 }
 
@@ -159,6 +161,14 @@ export class ElectionService {
           )
         )
       );
+    }
+
+    // A poll that nobody is on the roster for looks identical to a broken system
+    // from a student's phone, so COMELEC can hand the whole active student body a
+    // ballot in the same action that creates it. Later registrants still land in
+    // the approval queue instead of being silently auto-added.
+    if (input.enrollAllStudents) {
+      await voterService.enrollAllStudents(created.id, officerUserId);
     }
 
     const election = await this.getElectionById(created.id);

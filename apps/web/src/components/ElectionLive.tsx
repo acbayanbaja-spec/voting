@@ -1,7 +1,81 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Clock, Users } from "lucide-react";
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/**
+ * Counts from the previous value to the next one so a refreshed dashboard reads
+ * as live movement instead of numbers swapping under the reader's eye.
+ */
+export function AnimatedNumber({
+  value,
+  decimals = 0,
+  suffix = "",
+}: {
+  value: number;
+  decimals?: number;
+  suffix?: string;
+}) {
+  const safe = Number.isFinite(value) ? value : 0;
+  const [display, setDisplay] = useState(safe);
+  const fromRef = useRef(safe);
+
+  useEffect(() => {
+    const from = fromRef.current;
+    if (from === safe || prefersReducedMotion()) {
+      fromRef.current = safe;
+      setDisplay(safe);
+      return;
+    }
+
+    const start = performance.now();
+    const duration = 650;
+    let frame = 0;
+
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(from + (safe - from) * eased);
+      if (progress < 1) {
+        frame = requestAnimationFrame(step);
+      } else {
+        fromRef.current = safe;
+        setDisplay(safe);
+      }
+    };
+
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [safe]);
+
+  return (
+    <span className="tabular-nums">
+      {display.toFixed(decimals)}
+      {suffix}
+    </span>
+  );
+}
+
+/** Pulsing ring that marks a panel as live without a spinning loader. */
+export function LiveDot({ tone = "leaf" }: { tone?: "leaf" | "amber" | "rose" | "brand" }) {
+  const color = {
+    leaf: "bg-leaf-600 text-leaf-600",
+    amber: "bg-amber-500 text-amber-500",
+    rose: "bg-rose-500 text-rose-500",
+    brand: "bg-brand-600 text-brand-600",
+  }[tone];
+
+  return (
+    <span className="relative inline-flex w-2 h-2" aria-hidden="true">
+      <span className={`w-2 h-2 rounded-full ${color}`} />
+      <span className="live-halo absolute inset-0 rounded-full" />
+    </span>
+  );
+}
 
 function formatRemaining(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
